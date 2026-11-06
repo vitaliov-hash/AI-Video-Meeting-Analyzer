@@ -44,22 +44,23 @@ Vercel раздаёт только frontend: Python, Whisper и длительн
 
 ## GitHub статус
 
-Локальная ветка `feature/dz-pro` содержит Pro commit `17a89b7`; тег `dz-lite-v1` указывает на Lite checkpoint `e56ba54`. Подключённый GitHub connector подтверждает аккаунт `vitaliov-hash`; точного репозитория проекта среди доступных не найдено. Remote отсутствует. GitHub CLI установлен, но `gh auth status` обнаруживает недействительный сохранённый token, поэтому создать private repo и выполнить push/PR пока нельзя. Workflow проходит статические проверки; после авторизации останется выполнить CI на GitHub и проверить branch protection. Публичный доступ не разрешён.
+Локальная ветка `feature/dz-pro` содержит Pro commit `33df13f` (поверх Pro реализации `17a89b7`); локальная `main` создана от Lite tag и указывает на `e56ba54`. Тег `dz-lite-v1` сохранён. Подключённый GitHub connector подтверждает аккаунт `vitaliov-hash`; точного репозитория проекта среди доступных не найдено. Remote отсутствует. GitHub CLI установлен, но `gh auth status` обнаруживает недействительный сохранённый token, поэтому создать private repo и выполнить push/PR пока нельзя. Workflow проходит статические проверки; после авторизации останется выполнить CI на GitHub и проверить branch protection. Публичный доступ не разрешён.
 
-После отдельного согласования создайте Private repo `AI-Video-Meeting-Analyzer` без README/.gitignore/license. Подключение и push команд:
+После повторной авторизации GitHub CLI создайте Private repo `AI-Video-Meeting-Analyzer` в `vitaliov-hash` без README/.gitignore/license и подключите remote. Затем отправьте Lite `main`, Pro feature branch и существующий Lite tag:
 
 ```powershell
 git remote add origin https://github.com/vitaliov-hash/AI-Video-Meeting-Analyzer.git
-git push -u origin dz-lite-v1:refs/heads/main
+git push -u origin main
 git push -u origin feature/dz-pro
+git push origin refs/tags/dz-lite-v1:refs/tags/dz-lite-v1
 ```
 
 Первая команда push создаёт `main` из исторически сохранённого Lite tag; вторая отправляет Pro feature branch. Эти команды подготовлены, но не запускались. Затем открыть PR `feature/dz-pro` → `main`, проверить Actions и review; не использовать auto-merge.
 
 ## Действия перед подключением/публикацией
 
-1. Выбрать VPS/Docker hosting и проверить его актуальные цену, доступность постоянного диска, регион и ограничения времени/CPU.
-2. Подтвердить создание private GitHub repository, подключить remote и отправить только проверенные исходники.
+1. Повторно авторизовать GitHub CLI в аккаунте `vitaliov-hash`, создать private repository, подключить remote и отправить только проверенные исходники.
+2. Выбрать VPS/Docker hosting и проверить его актуальные цену, доступность постоянного диска, регион и ограничения времени/CPU.
 3. Включить Pull Request workflow и required checks, настроить защиту `main` в возможностях выбранного GitHub plan.
 4. Создать Vercel project для статического frontend и задать `PUBLIC_API_BASE_URL`.
 5. Создать backend service с постоянным volume, HTTPS и точным `CORS_ALLOWED_ORIGINS`; добавить API key в backend secrets.
