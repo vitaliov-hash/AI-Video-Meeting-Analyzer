@@ -42,7 +42,7 @@
 
 - Не сохранять пользовательские share URLs, API keys, видео, model cache или локальную базу в Git/ZIP.
 - Локальный `.env` существует; его значения не читать и не выводить.
-- Stage 3 GitHub уже завершён: private repository существует; `main`, `feature/dz-pro` и tag `dz-lite-v1` отправлены, PR #1 прошёл CI и слит. Текущее изменение Stage 4 изолировано в `feature/stage4-showcase`; для него требуется отдельный PR и CI.
+- Stage 3 GitHub завершён: private repository существует; `main`, `feature/dz-pro` и tag `dz-lite-v1` отправлены, PR #1 прошёл CI и слит. Stage 4 PR #3 из `feature/stage4-showcase` также прошёл все CI checks (Actions run `42276091985`) и слит в `main` merge commit `0fd1333060c6f179ba6244ed158198bea9ab9795`; tag `dz-lite-v1` не менялся.
 - Публичный deployment backend остаётся заблокирован до server-side auth, rate limiting, ограничений расходов, TLS, persistent storage/backups и выбора хоста. Stage 4 допускает только отдельную статическую Showcase-сборку без backend.
 
 ## Stage 4 — текущая ветка Showcase
@@ -51,6 +51,6 @@
 - Vercel build переключён на статический Showcase. Артефакт содержит только frontend и безопасный синтетический `static/demo-data.json`; живые API-формы и polling в этом режиме выключены. Live mode и прежний Lite/Pro pipeline сохранены.
 - Копирование фальшивого RU/EN материала в публичный build сделано только после проверки `MEDIA_LICENSE_NOTES.md`: в файле данных нет пользовательских записей, частных Drive ID или реальной транскрипции. Оба текста явно обозначены вымышленными.
 - Временный Teacher Live Demo не реализован и не активирован. FastAPI не опубликован; для будущего режима остаются обязательными auth, квоты, ограничения видео/расхода, срок до 7 дней и серверный kill switch.
-- Локально подтверждены: 28 pytest, Ruff, compileall по `meeting_analyzer`, `tests`, `scripts`, JS syntax, RU/EN harness, изоляция live/Showcase build и HTTP smoke (страница/data 200, `/api/meetings` 404). Chrome/CDP проверил RU/EN desktop и mobile width 390 px; `innerWidth=390`, `scrollWidth=390`, один столбец. ZIP после Stage 4 пересобран, security scan PASS, 52 безопасных entries. Скриншоты лежат в `docs/showcase/`; внешний Vercel deployment и CI для Stage 4 ещё pending.
+- Локально подтверждены: 28 pytest, Ruff, compileall по `meeting_analyzer`, `tests`, `scripts`, JS syntax, RU/EN harness, изоляция live/Showcase build и HTTP smoke (страница/data 200, `/api/meetings` 404). Chrome/CDP проверил RU/EN desktop и mobile width 390 px; `innerWidth=390`, `scrollWidth=390`, один столбец. ZIP после Stage 4 пересобран, security scan PASS, 52 безопасных entries. Скриншоты лежат в `docs/showcase/`; CI для Stage 4 прошёл на PR #3, внешний Vercel deployment пока pending.
 - Vercel Hobby должен быть подтверждён в аккаунте до создания project. Для Hobby личного пользователя нужен некоммерческий use; учебный проект предполагается некоммерческим. Если Vercel просит карту/платный upgrade, остановиться.
 - Не публиковать транскрипты из SQLite и видео с неподтверждёнными правами. Для преподавателя подготовлен `TEACHER_HANDOUT.md`; фактическую Vercel ссылку и screenshots нужно добавить после внешней проверки.

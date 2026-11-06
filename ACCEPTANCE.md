@@ -40,7 +40,7 @@
 - Secrets/privacy scan: **PASS** — repository files and Pro ZIP checked for recognizable secrets, local data/media and non-placeholder Drive file URLs
 - Vercel frontend build: **PASS** — `node scripts/build_frontend.mjs` generated `frontend-dist` with HTTPS API base
 - Clean Lite package install/runtime: **PASS** — Lite ZIP распакован отдельно, setup создал venv и установил runtime-зависимости; `/` и `/api/meetings` ответили 200
-- Git diff/status Stage 3: **PASS** — PR #1 из `feature/dz-pro` был проверен Actions и слит в `main`; remote приватного репозитория настроен. Stage 4 ведётся отдельно в `feature/stage4-showcase`, без перемещения `dz-lite-v1`.
+- GitHub Stage 4: **PASS** — commit `8a3a933` из `feature/stage4-showcase` прошёл GitHub Actions (run `42276091985`, все checks success) и слит через PR #3; merge commit `0fd1333`. Tag `dz-lite-v1` не перемещался.
 
 ## Формат сдачи
 
