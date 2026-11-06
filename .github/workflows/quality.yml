@@ -37,5 +37,7 @@ jobs:
           node scripts/test_showcase_mode.mjs
           node scripts/verify_frontend_build.mjs
           node scripts/build_frontend.mjs --showcase
+      - name: Package sanitized DZ Pro submission
+        run: python scripts/package_dz_pro.py
       - name: Check repository and archive hygiene
         run: python scripts/security_check.py --archive dist/AI-Video-Meeting-Analyzer-DZ-Pro.zip --archive-optional

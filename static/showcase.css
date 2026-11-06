@@ -1,7 +1,21 @@
 .showcase-only{display:none}
+.teacher-preview-only{display:none}
 html[data-app-mode="showcase"] .live-only{display:none!important}
 html[data-app-mode="showcase"] .showcase-only{display:block}
 html[data-app-mode="showcase"] .eyebrow.showcase-only{display:block}
+html[data-app-mode="teacher-preview"] .teacher-preview-only{display:block}
+html[data-app-mode="teacher-preview"] .eyebrow.teacher-preview-only{display:block}
+html[data-app-mode="teacher-preview"] .teacher-login{display:grid}
+html[data-app-mode="teacher-preview"]:not([data-authenticated="true"]) .teacher-protected{display:none!important}
+.teacher-login{display:grid;max-width:420px;grid-template-columns:1fr auto;gap:10px;margin:0 0 24px;padding:20px;background:#fff;border:1px solid var(--line);border-radius:14px}
+.teacher-login strong,.teacher-login label,.teacher-login p{grid-column:1/-1}
+.teacher-login input{min-width:0;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit}
+.teacher-login .button{margin:0;border:0}
+.teacher-login p{margin:0;color:#a43c32;font-size:13px}
+.teacher-session{align-items:center;justify-content:space-between;gap:12px;margin:0 0 18px;padding:12px 15px;border:1px solid #cfe2d5;border-radius:10px;background:#eef7f0;color:#245b40;font-size:13px}
+.teacher-preview-only.teacher-session{display:flex}
+.teacher-session button{border:0;background:transparent;color:#176c4e;font:600 13px "Segoe UI",sans-serif;cursor:pointer}
+html[data-app-mode="teacher-preview"] [hidden]{display:none!important}
 .showcase-notice{margin:0 0 24px;padding:16px 18px;border:1px solid #cfe2d5;border-radius:12px;background:#eef7f0;color:#245b40}
 .showcase-notice strong{display:block;margin-bottom:6px;font-size:14px}
 .showcase-notice p{margin:0;color:#456852;font-size:13px;line-height:1.55}
@@ -21,3 +35,4 @@ html[data-app-mode="showcase"] .summary-grid{grid-template-columns:repeat(2,minm
 .summary-card{min-width:0;overflow-wrap:anywhere}
 @media(max-width:760px){html[data-app-mode="showcase"] .layout{grid-template-columns:minmax(0,1fr)}html[data-app-mode="showcase"] .summary-grid{grid-template-columns:minmax(0,1fr)}.history,.details,.meeting-list,.meeting{min-width:0}.detail-head{flex-direction:column}html[data-app-mode="showcase"] header p{max-width:100%;overflow-wrap:anywhere}}
 @media(max-width:430px){.showcase-notice{padding:14px}.summary-tab{flex:1 1 100%;text-align:left}}
+@media(max-width:500px){.teacher-login{grid-template-columns:1fr}.teacher-login strong,.teacher-login label,.teacher-login p{grid-column:auto}.teacher-session{align-items:flex-start;flex-direction:column}}

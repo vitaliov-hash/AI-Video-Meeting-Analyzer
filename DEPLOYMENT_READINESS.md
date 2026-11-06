@@ -25,9 +25,9 @@
 
 ## Stage 4 — бесплатный статический Showcase
 
-Текущая ветка добавляет Showcase build на базе одной кодовой базы. `vercel.json` использует `node scripts/build_frontend.mjs --showcase`; сборка очищает `frontend-dist`, не включает API URL и кладёт в него только HTML, CSS, JavaScript и синтетический JSON с RU/EN примерами. Из Vercel bundle исключены Python API, локальная SQLite, видео, модель, DeepSeek ключ и пользовательские транскрипты.
+Stage 4 добавила Showcase build на базе одной кодовой базы. Сейчас `vercel.json` использует guarded `node scripts/build_frontend.mjs --vercel`; без Preview guard variables сборка остаётся Showcase, не включает API URL и кладёт только HTML, CSS, JavaScript и синтетический JSON с RU/EN примерами. Из Vercel bundle исключены Python API, локальная SQLite, видео, модель, DeepSeek ключ и пользовательские транскрипты.
 
-Showcase запрашивает только `/static/demo-data.json`; добавление/импорт записи и polling `/api/meetings` отключены. Это статические фиктивные примеры, не результаты AI, полученные опубликованным сайтом. Проверки сборки и поведения добавлены в CI. Публичный deployment остаётся **неподтверждённым до ручной проверки аккаунта Hobby, создания проекта и smoke-теста URL**. Не переходить на тариф, который требует карту или оплату.
+Showcase запрашивает только `/static/demo-data.json`; добавление/импорт записи и polling `/api/meetings` отключены. Это статические фиктивные примеры, не результаты AI, полученные опубликованным сайтом. Проверки сборки и поведения добавлены в CI. GitHub Vercel check на `main` сообщил success; точный публичный URL и тариф всё ещё нужно подтвердить перед отправкой handout. Не переходить на тариф, который требует карту или оплату.
 
 По актуальным официальным правилам Vercel Hobby бесплатен, предназначен для личного некоммерческого использования; персональный GitHub-репозиторий можно подключить владельцу аккаунта. Репозиторий проекта принадлежит личной учётной записи GitHub, не организации. Учебный Showcase предполагается некоммерческим. [Vercel Hobby](https://vercel.com/docs/plans/hobby), [Terms](https://vercel.com/legal/terms), [GitHub integration](https://vercel.com/docs/git/vercel-for-github), [private repositories](https://vercel.com/docs/git#deploying-private-git-repositories).
 
@@ -53,19 +53,32 @@ SQLite и один in-process background worker подходят для single-i
 
 Vercel раздаёт только frontend: Python, Whisper и длительный AI pipeline там не запускаются. Реальный E2E выполнен локально; его результат и ограничения приведены в `ACCEPTANCE.md`.
 
+## Stage 5 — временный Teacher Preview за $0 (не активирован)
+
+Текущий код подготовки: отдельная закрытая Teacher Preview сборка Vercel Preview + loopback Python/Faster-Whisper backend на Windows + временный Cloudflare Quick Tunnel + `.teacher-demo-data` SQLite. Персональная база не открывается, DeepSeek key остаётся только в локальном backend `.env`, Public Showcase остаётся статическим. Этот режим не является production и не имеет SLA.
+
+Защитные ограничения в backend: обязательный bearer token на всех API, login/API rate limits, streamed request cap, максимум 2 новых анализа на срок, максимум 100 MB на видео, максимум 8 000 символов транскрипта, 32 000 UTF-8 bytes AI prompt и 600 output tokens. Срок задаётся 5 суток и не может превышать 7; состояние хранится между перезапусками. Kill switch создаёт локальный файл отключения. Режим не включался, публичный tunnel и длительный worker не проверялись.
+
+Для короткой supervised проверки понадобится: отдельный Vercel Preview project/environment; переменная `TEACHER_PREVIEW_BUILD=1` только в Preview; `PUBLIC_API_BASE_URL` с актуальным HTTPS адресом Quick Tunnel; точный Preview origin в backend `CORS_ALLOWED_ORIGINS`; `TEACHER_DEMO_ENABLED=true`, `MAX_UPLOAD_MB=100`, локальные сильные пароль/секрет и действующий серверный `DEEPSEEK_API_KEY`. Любые credentials добавляются только в Windows backend `.env` или Vercel non-secret Preview vars, не Git. Проект и tunnel не активируются без отдельного решения владельца. Чтобы немедленно выключить API во время демонстрации, запустить `python -m meeting_analyzer.teacher_demo --disable`; для остановки всего backend завершить его локальный процесс и tunnel.
+
+Cloudflare Quick Tunnel — бесплатный временный URL для разработки/тестирования; он прекращается при остановке процесса и не является стабильным production endpoint. Для Vercel Hobby учитывайте текущие условия персонального некоммерческого использования; текущий домен и план в этой сессии отдельно не проверены. [Quick Tunnels](https://developers.cloudflare.com/cloudflare-one/networks/connectivity-options/), [Vercel Hobby](https://vercel.com/docs/plans/hobby), [Vercel Terms](https://vercel.com/legal/terms).
+
+## Финальная сдача и публичный риск
+
+Git repository verdict для переключения visibility: **NOT SAFE**. В полном достижимом Git history есть личные author identities, а история может быть скопирована до возврата репозитория в Private. Оставить исходный repository private. Если публичный код нужен для оценки, подготовить отдельный очищенный репозиторий с минимальной новой историей и без пользовательских материалов.
+
+GitHub Vercel commit status на актуальном `main` (`dae8bf4a45a1a00a95af4c324cc8b57c2a9b7030`) равен success и указывает на [deployment record](https://vercel.com/vitali7/ai-video-meeting-analyzer/B9fwJxhThQBua2XWTk4XMe1Vbey3). Публичный frontend domain из status API получить нельзя; владелец должен внести его в `TEACHER_HANDOUT.md`. Права на прошлую реальную E2E запись не подтверждены, поэтому снимки и запись экрана из неё не публиковать. Полный live proof остаётся требованием до окончательного закрытия сдачи; новых платных запросов не выполнялось.
+
 ## GitHub статус
 
 Приватный репозиторий: [AI-Video-Meeting-Analyzer](https://github.com/vitaliov-hash/AI-Video-Meeting-Analyzer). В нём `main` из Lite checkpoint, `feature/dz-pro` с Pro, сохранённый tag `dz-lite-v1`. PR #1 прошёл все CI шаги и слит обычным merge commit `80e15afe303431df2a29e2076874ec539e18217c`. CI run IDs: `42262127724` (PR), `42262426419` (post-merge `main`); оба завершились success.
 
 Защита `main` не включена: GitHub API отказал с HTTP 403 и сообщением, что branch protection для приватного репозитория требует GitHub Pro. Публичность не включалась, ограничение плана не обходилось. Слияние сделано только после успешного PR CI. Рабочее дерево чистое; local `main` синхронизирована с remote.
 
-## Действия для завершения Stage 4 и будущего живого режима
+## Актуальный статус и оставшиеся действия владельца
 
-1. Проверить в существующем Vercel-аккаунте, что активен Hobby; если виден upgrade, карта или платный тариф, остановиться.
-2. Подключить приватный GitHub repository к проекту Vercel с feature branch Stage 4 как source; исходник оставить private.
-3. Убедиться, что Vercel применил `vercel.json`, собрал каталог `frontend-dist` и не просит secret variables.
-4. Проверить публичный URL: историю, RU/EN summaries, мобильную ширину, перезагрузку, отсутствие API processing endpoints и нулевые запросы к AI.
-5. Добавить фактическую ссылку и безопасные скриншоты в `TEACHER_HANDOUT.md` после верификации.
-6. Teacher Live Demo не включать до реализации авторизации, per-user квот, ограничений размера/длительности, лимита расходов, expiry (5 дней; максимум 7) и серверного kill switch.
-
-GitHub repository создан и остаётся private. Ветка Stage 4 готовит deployment, но Hosting project и публичный deployment будут отмечены как готовые только после реального smoke-теста Vercel URL.
+1. Уточнить публичный `*.vercel.app` URL у владельца и внести его в `TEACHER_HANDOUT.md`; GitHub Vercel deployment status на текущем `main` success, но не раскрывает frontend domain.
+2. Если преподавателю нужен GitHub access, пригласить его аккаунт в private repo; не менять visibility исходного проекта.
+3. Подтвердить права/согласие на демонстрационный источник или предоставить новый разрешённый MP4/WebM. Права на прежний live E2E клип не подтверждены.
+4. Для записи статусов полного нового E2E понадобится ещё один DeepSeek вызов; он не выполнялся и требует отдельного согласования. Если права подтвердятся для прежнего результата, новые кадры финальной persistence/dedup можно сделать без нового анализа, но исторические промежуточные состояния не сохранены.
+5. Teacher Preview, Cloudflare tunnel и backend не включать до отдельного согласования владельца.

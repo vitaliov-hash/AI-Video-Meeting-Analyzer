@@ -8,6 +8,7 @@ __pycache__/
 .tmp-pip/
 venv/
 data/
+.teacher-demo-data/
 uploads/
 models/
 *.sqlite3

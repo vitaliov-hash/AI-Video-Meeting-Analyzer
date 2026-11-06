@@ -7,6 +7,7 @@ import imageio_ffmpeg
 from .config import settings
 from .providers.speech import FasterWhisperProvider
 from .providers.summary import ConfiguredSummaryProvider
+from .teacher_demo import TeacherDemoGuard
 
 
 def process_video(video_path: Path, on_transcript=None) -> tuple[str, str, dict]:
@@ -23,6 +24,13 @@ def process_video(video_path: Path, on_transcript=None) -> tuple[str, str, dict]
             raise ValueError("Не удалось извлечь аудио. Убедитесь, что видео не повреждено и содержит звук.")
         transcript = FasterWhisperProvider(settings.whisper_model, settings.whisper_device,
                                            settings.whisper_compute_type).transcribe(str(audio_path))
+    if (settings.teacher_demo_enabled
+            and len(transcript.text) > settings.teacher_demo_max_transcript_chars):
+        raise ValueError(
+            "Распознанный текст превышает лимит Teacher Demo; AI-анализ не запускался."
+        )
+    if settings.teacher_demo_enabled:
+        TeacherDemoGuard(settings).ensure_active()
     if on_transcript is not None:
         on_transcript(transcript.text, transcript.language)
     summary = ConfiguredSummaryProvider(settings.provider).summarize(transcript.text, transcript.language)
