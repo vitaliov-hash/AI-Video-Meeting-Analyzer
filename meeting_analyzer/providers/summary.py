@@ -39,6 +39,7 @@ class ConfiguredSummaryProvider(SummaryProvider):
                 "messages": [{"role": "system", "content": system_prompt},
                              {"role": "user", "content": prompt}],
                 "response_format": {"type": "json_object"},
+                "max_tokens": 1600,
             }
             if self.provider == "deepseek":
                 payload["thinking"] = {"type": "disabled"}
@@ -58,9 +59,9 @@ class ConfiguredSummaryProvider(SummaryProvider):
             model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
             try:
                 response = httpx.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-                    params={"key": key}, json={"systemInstruction": {"parts": [{"text": system_prompt}]},
+                    headers={"x-goog-api-key": key}, json={"systemInstruction": {"parts": [{"text": system_prompt}]},
                             "contents": [{"parts": [{"text": prompt}]}],
-                            "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}}, timeout=180)
+                            "generationConfig": {"maxOutputTokens": 1600, "responseMimeType": "application/json"}}, timeout=180)
                 response.raise_for_status()
             except httpx.HTTPStatusError as exc:
                 raise RuntimeError(f"AI-провайдер вернул ошибку HTTP {exc.response.status_code}. Проверьте ключ и модель.") from None

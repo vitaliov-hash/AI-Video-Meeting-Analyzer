@@ -10,6 +10,8 @@ def test_single_page_history_and_upload_validation(tmp_path, monkeypatch):
     page = client.get("/")
     assert page.status_code == 200
     assert "Анализатор встреч" in page.text
+    assert 'id="cloud-form"' in page.text
+    assert "Добавить из облака" in page.text
     assert client.get("/api/meetings").json() == []
     response = client.post("/api/meetings", files={"file": ("notes.txt", b"not a video", "text/plain")})
     assert response.status_code == 400
@@ -38,3 +40,50 @@ def test_transcript_is_kept_if_summary_fails(tmp_path, monkeypatch):
     assert result["status"] == "error"
     assert result["language"] == "ru"
     assert result["transcript"] == "Обсудили проект."
+
+
+def test_cloud_link_uses_shared_pipeline_and_deduplicates(tmp_path, monkeypatch):
+    store = MeetingStore(tmp_path / "cloud.sqlite3")
+    monkeypatch.setattr(app_module, "store", store)
+    source = tmp_path / "download.webm"
+    source.write_bytes(bytes.fromhex("1a45dfa3") + b"fixture")
+    pipeline_calls = []
+
+    class InlineExecutor:
+        def submit(self, function, *args):
+            function(*args)
+
+    monkeypatch.setattr(app_module, "executor", InlineExecutor())
+    monkeypatch.setattr(app_module, "download_google_drive_video", lambda *_args: (
+        source, "meeting.webm", "https://drive.google.com/file/d/TEST_FILE_ID_1234567890ABCDE/view"
+    ))
+
+    def process(path, on_transcript):
+        pipeline_calls.append(path)
+        on_transcript("Discussed the schedule.", "en")
+        return "Discussed the schedule.", "en", {
+            "short_summary": "Schedule discussed", "decisions": [],
+            "next_tasks": [], "open_questions": [],
+        }
+
+    monkeypatch.setattr(app_module, "process_video", process)
+    client = TestClient(app_module.app)
+    share = "https://drive.google.com/file/d/TEST_FILE_ID_1234567890ABCDE/view"
+    first = client.post("/api/meetings/cloud", json={"url": share})
+    assert first.status_code == 200
+    assert first.json()["source"] == "cloud"
+    assert first.json()["status"] == "ready"
+    second = client.post("/api/meetings/cloud", json={"url": share + "?utm_source=again"})
+    assert second.status_code == 200
+    assert second.json()["duplicate"] is True
+    assert second.json()["id"] == first.json()["id"]
+    assert len(pipeline_calls) == 1
+
+
+def test_cloud_link_rejects_unsupported_host(tmp_path, monkeypatch):
+    monkeypatch.setattr(app_module, "store", MeetingStore(tmp_path / "cloud.sqlite3"))
+    response = TestClient(app_module.app).post(
+        "/api/meetings/cloud", json={"url": "https://example.com/video.webm"}
+    )
+    assert response.status_code == 400
+    assert "Google Drive" in response.json()["detail"]

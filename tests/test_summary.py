@@ -45,6 +45,18 @@ def test_provider_uses_product_prompt_and_marks_empty_categories(monkeypatch):
     assert result["open_questions"] == ["В записи это не прозвучало."]
 
 
+def test_prompt_distinguishes_decisions_inferences_and_source_conflicts():
+    from pathlib import Path
+
+    prompt = (Path(__file__).resolve().parents[1] / "prompts" / "meeting_summary.md").read_text(
+        encoding="utf-8"
+    )
+    assert "решение ещё не принято" in prompt
+    assert "Не создавай follow-up вопросы из критики" in prompt
+    assert "Не исправляй имена по памяти или внешним знаниям" in prompt
+    assert "арифметическое несоответствие" in prompt
+
+
 def test_missing_provider_key_fails_without_request(monkeypatch):
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
     provider = ConfiguredSummaryProvider("deepseek")

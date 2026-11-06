@@ -22,4 +22,17 @@ models/
 secrets/
 credentials/
 .pytest_cache/
+.pytest-tmp/
+.pytest-tmp*/
 .ruff_cache/
+dist/
+frontend-dist/
+.lite-package-stage/
+.quality-venv/
+.quality-pip-cache/
+.quality-*/
+.e2e-venv/
+.lite-install-smoke/
+# Local-only acceptance helpers reference external recordings and/or may call paid AI.
+scripts/run_live_acceptance.py
+scripts/smoke_google_drive_link.py

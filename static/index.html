@@ -11,6 +11,10 @@
       <div class="upload-icon">↑</div><div><strong>Добавить запись</strong><p>MP4 или WebM · обработка начнётся сразу</p></div>
       <label class="button" for="video-file">Выбрать видео</label><input id="video-file" type="file" accept="video/mp4,video/webm,.mp4,.webm" hidden>
     </section>
+    <form id="cloud-form" class="upload cloud-upload" aria-label="Импорт из облака">
+      <div class="upload-icon">↗</div><div class="cloud-fields"><strong>Добавить из Google Drive</strong><p>Вставьте публичную ссылку на файл MP4 или WebM</p><input id="cloud-url" type="url" inputmode="url" autocomplete="url" placeholder="https://drive.google.com/file/d/…/view" required></div>
+      <button id="cloud-submit" class="button" type="submit">Добавить из облака</button>
+    </form>
     <div id="notice" class="notice" role="status" hidden></div>
     <div class="layout">
       <section class="history"><div class="section-heading"><h2>Встречи</h2><span id="meeting-count">0</span></div><div id="meeting-list" class="meeting-list"></div></section>
@@ -18,5 +22,6 @@
     </div>
     <footer>Видеофайл удаляется после обработки. Расшифровка и конспект хранятся локально; транскрипт передаётся настроенному AI-провайдеру.</footer>
   </main>
+  <script src="/static/runtime-config.js"></script>
   <script src="/static/app.js" defer></script>
 </body></html>
