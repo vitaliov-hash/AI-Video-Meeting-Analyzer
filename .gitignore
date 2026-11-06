@@ -31,6 +31,7 @@ frontend-dist/
 .quality-venv/
 .quality-pip-cache/
 .quality-*/
+.stage4-temp/
 .e2e-venv/
 .lite-install-smoke/
 # Local-only acceptance helpers reference external recordings and/or may call paid AI.

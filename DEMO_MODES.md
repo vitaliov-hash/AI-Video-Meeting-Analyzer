@@ -1,6 +1,6 @@
 # Future demonstration modes — agreed scope
 
-This document records the planned separation between a short-lived, controlled teacher demonstration and a no-cost public showcase. **Neither mode is deployed or activated.** This is architecture guidance, not a claim that these controls already exist.
+This document records the separation between a short-lived, controlled teacher demonstration and a no-cost public showcase. The static Showcase implementation is present in this branch, but **it is not considered deployed until a Vercel URL is verified**. Teacher Live Demo is not implemented, deployed, or activated. Do not infer otherwise from this plan.
 
 ## Teacher Live Demo
 
@@ -13,11 +13,12 @@ This document records the planned separation between a short-lived, controlled t
 
 ## Public Showcase
 
-- Offer precomputed RU and EN examples only.
+- Offer precomputed RU and EN examples only. This branch serves two synthetic examples from `static/demo-data.json`; no real recording-derived data is included.
 - Make **zero paid-AI calls** from the public showcase.
-- Do not expose public endpoints capable of starting transcription, cloud downloads, or AI analysis. Remove those routes from the showcase deployment or require a server-side feature flag that is permanently off there.
+- Do not expose public endpoints capable of starting transcription, cloud downloads, or AI analysis. Vercel's output is a fresh static-only directory; the build includes no Python backend or serverless functions and rejects `PUBLIC_API_BASE_URL` in Showcase mode.
 - Serve only sanitized demonstration artifacts; exclude real recordings, private transcripts, credentials, local databases, and user-specific cloud links.
-- Verify through deployment-level tests that the showcase cannot reach paid providers and that analysis endpoints return unavailable even if called directly.
+- Confirm that the deployed origin serves the interface and prepared examples and returns no analysis service for direct `/api/meetings` requests. Record this as a deployment check once the site is live.
+- The initial static summary is explicitly labeled as a prepared fictional example, not a real AI answer. A separate editorial version and the synthetic transcript are available for comparison.
 
 ## Shared deployment requirements
 

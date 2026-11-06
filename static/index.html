@@ -2,16 +2,20 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>AI-анализатор встреч</title><link rel="stylesheet" href="/static/styles.css">
+  <title>AI-анализатор встреч</title><script src="/static/runtime-config.js"></script><link rel="stylesheet" href="/static/styles.css"><link rel="stylesheet" href="/static/showcase.css">
 </head>
 <body>
   <main class="shell">
-    <header><div class="eyebrow">ЛОКАЛЬНЫЙ AI-ИНСТРУМЕНТ</div><h1>Анализатор встреч</h1><p>Загрузите запись: видео и распознавание обрабатываются на компьютере, транскрипт отправляется выбранному AI-провайдеру для конспекта.</p></header>
-    <section class="upload" aria-label="Загрузка записи">
+    <header><div class="eyebrow live-only">ЛОКАЛЬНЫЙ AI-ИНСТРУМЕНТ</div><div class="eyebrow showcase-only">ДЕМОНСТРАЦИОННЫЙ РЕЖИМ</div><h1>Анализатор встреч</h1><p class="live-only">Загрузите запись: видео и распознавание обрабатываются на компьютере, транскрипт отправляется выбранному AI-провайдеру для конспекта.</p><p class="showcase-only">Готовые примеры на русском и английском языках</p></header>
+    <section id="showcase-notice" class="showcase-notice showcase-only" aria-label="О демонстрационных данных">
+      <strong>Статическая демонстрация — живой анализ отключён</strong>
+      <p>Примеры полностью вымышлены и подготовлены заранее. Этот сайт не загружает записи и не обращается к сервисам распознавания или AI.</p>
+    </section>
+    <section class="upload live-only" aria-label="Загрузка записи">
       <div class="upload-icon">↑</div><div><strong>Добавить запись</strong><p>MP4 или WebM · обработка начнётся сразу</p></div>
       <label class="button" for="video-file">Выбрать видео</label><input id="video-file" type="file" accept="video/mp4,video/webm,.mp4,.webm" hidden>
     </section>
-    <form id="cloud-form" class="upload cloud-upload" aria-label="Импорт из облака">
+    <form id="cloud-form" class="upload cloud-upload live-only" aria-label="Импорт из облака">
       <div class="upload-icon">↗</div><div class="cloud-fields"><strong>Добавить из Google Drive</strong><p>Вставьте публичную ссылку на файл MP4 или WebM</p><input id="cloud-url" type="url" inputmode="url" autocomplete="url" placeholder="https://drive.google.com/file/d/…/view" required></div>
       <button id="cloud-submit" class="button" type="submit">Добавить из облака</button>
     </form>
@@ -20,8 +24,9 @@
       <section class="history"><div class="section-heading"><h2>Встречи</h2><span id="meeting-count">0</span></div><div id="meeting-list" class="meeting-list"></div></section>
       <section id="details" class="details"><div class="empty"><div class="empty-mark">◌</div><h2>Выберите встречу</h2><p>Готовые записи и их конспекты появятся здесь.</p></div></section>
     </div>
-    <footer>Видеофайл удаляется после обработки. Расшифровка и конспект хранятся локально; транскрипт передаётся настроенному AI-провайдеру.</footer>
+    <footer class="live-only">Видеофайл удаляется после обработки. Расшифровка и конспект хранятся локально; транскрипт передаётся настроенному AI-провайдеру.</footer>
+    <footer class="showcase-only">В примерах нет пользовательских записей, реальных транскрипций или личных ссылок. Перезагрузка страницы не удаляет демонстрационные материалы.</footer>
   </main>
-  <script src="/static/runtime-config.js"></script>
   <script src="/static/app.js" defer></script>
+  <script src="/static/showcase.js" defer></script>
 </body></html>

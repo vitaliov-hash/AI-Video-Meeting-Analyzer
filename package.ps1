@@ -4,7 +4,7 @@ $dist = Join-Path $root 'dist'
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 $zip = Join-Path $dist 'AI-Video-Meeting-Analyzer-DZ-Pro.zip'
 if (Test-Path $zip) { Remove-Item -LiteralPath $zip -Force }
-$include = @('meeting_analyzer','static','prompts','tests','scripts/build_frontend.mjs','scripts/security_check.py','.github/workflows/quality.yml','README.md','SUBMISSION.md','SUBMISSION-LITE.md','DZ-PRO-SUBMISSION.md','DEPLOYMENT_READINESS.md','DEMO_GUIDE.md','ACCEPTANCE.md','PROJECT_CONTEXT.md','TECHNICAL_SPEC.md','SYSTEM_PROMPT.md','MEDIA_LICENSE_NOTES.md','requirements.txt','requirements-dev.txt','.env.example','setup.ps1','start.ps1','Dockerfile','.dockerignore','vercel.json')
+$include = @('meeting_analyzer','static','prompts','tests','docs/showcase','scripts/build_frontend.mjs','scripts/verify_frontend_build.mjs','scripts/test_showcase_mode.mjs','scripts/security_check.py','.github/workflows/quality.yml','README.md','SUBMISSION.md','SUBMISSION-LITE.md','DZ-PRO-SUBMISSION.md','DEPLOYMENT_READINESS.md','DEMO_GUIDE.md','DEMO_MODES.md','TEACHER_HANDOUT.md','ACCEPTANCE.md','PROJECT_CONTEXT.md','TECHNICAL_SPEC.md','SYSTEM_PROMPT.md','MEDIA_LICENSE_NOTES.md','requirements.txt','requirements-dev.txt','.env.example','setup.ps1','start.ps1','Dockerfile','.dockerignore','vercel.json')
 $files = foreach ($item in $include) {
     $p = Join-Path $root $item
     if (Test-Path $p -PathType Container) {

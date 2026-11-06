@@ -1,5 +1,5 @@
 {
-  "buildCommand": "node scripts/build_frontend.mjs",
+  "buildCommand": "node scripts/build_frontend.mjs --showcase",
   "outputDirectory": "frontend-dist",
   "framework": null,
   "cleanUrls": false
