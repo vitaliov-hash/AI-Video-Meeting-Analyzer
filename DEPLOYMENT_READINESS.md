@@ -25,6 +25,8 @@
 
 ## Подготовленные локальные файлы
 
+Согласованные будущие режимы (не развёрнуты) описаны в `DEMO_MODES.md`: Teacher Live Demo ограничен 5 днями (максимум 7) с серверным истечением и квотами; Public Showcase показывает готовые RU/EN примеры без платных AI-вызовов и без публично вызываемых endpoints анализа. `DEMO_SUMMARY_EN_REVIEWED.md` — отдельная редакторская EN-демонстрация; исходные AI-результаты не менялись.
+
 - `vercel.json` собирает статический frontend командой `node scripts/build_frontend.mjs`.
 - `scripts/build_frontend.mjs` принимает `PUBLIC_API_BASE_URL`, проверяет HTTPS и создаёт runtime-конфиг без секретов.
 - `Dockerfile` собирает Python backend и запускает его на `0.0.0.0:8000` с постоянным `/data`.
@@ -42,7 +44,7 @@ Vercel раздаёт только frontend: Python, Whisper и длительн
 
 ## GitHub статус
 
-Локально создана ветка `feature/dz-pro`; тег `dz-lite-v1` указывает на подтверждённый Lite checkpoint `e56ba54`. Подключённый GitHub login подтверждён как `vitaliov-hash`; точного репозитория проекта среди доступных в аккаунте нет. Remote отсутствует, поэтому URL, Actions run, Pull Request и защита `main` ещё не настроены. Workflow подготовлен, но станет CI только после создания private repository и branch rules/required checks. Push и публикация не выполнялись.
+Локальная ветка `feature/dz-pro` содержит Pro commit `17a89b7`; тег `dz-lite-v1` указывает на Lite checkpoint `e56ba54`. Подключённый GitHub connector подтверждает аккаунт `vitaliov-hash`; точного репозитория проекта среди доступных не найдено. Remote отсутствует. GitHub CLI установлен, но `gh auth status` обнаруживает недействительный сохранённый token, поэтому создать private repo и выполнить push/PR пока нельзя. Workflow проходит статические проверки; после авторизации останется выполнить CI на GitHub и проверить branch protection. Публичный доступ не разрешён.
 
 После отдельного согласования создайте Private repo `AI-Video-Meeting-Analyzer` без README/.gitignore/license. Подключение и push команд:
 

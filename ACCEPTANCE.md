@@ -83,8 +83,16 @@
 
 Для будущих запусков уточнено правило prompt: не переносить “решение не принято” в `decisions`, не создавать вопросы из критики, не исправлять имена извне и явно показывать внутренние арифметические конфликты. Добавлен регрессионный тест текста prompt. **Реальный анализ по изменённому prompt не запускался.**
 
+Для отдельного показа подготовлен `DEMO_SUMMARY_EN_REVIEWED.md`: редакторские исправления и неопределённости явно отделены от AI-ответа. Сохранённая транскрипция и оба оригинальных AI-конспекта в SQLite не менялись.
+
+## Согласованные будущие режимы демонстрации
+
+- Требования к Teacher Live Demo (5 дней, максимум 7, серверное выключение по сроку/квоте/бюджету) и Public Showcase (готовые RU/EN примеры, ноль платных AI-вызовов, недоступные analysis endpoints) записаны в `DEMO_MODES.md`.
+- Ни один режим не активирован и не развёрнут. Перед живой демонстрацией нужны аутентификация/авторизация backend, ограничения запросов/расходов, обработок и загрузок.
+
 ### Безопасность журналов и итоговый тестовый прогон
 
 - HTTPX/HTTPCore logger families (`httpx`, `httpcore`, `httpx2`, `httpcore2`) и Uvicorn access logger отключены; приложение журналирует только тип события/исключения, без URL, IP и ID встречи. Системные журналы не удалялись.
 - Тесты `tests/test_logging_privacy.py` проверяют подавление HTTP request logs и отсутствие фиктивных URL, bearer/API key и ID встречи в журнале ошибки облачного импорта.
 - Итоговый Quality Gate: pytest **28 passed**, Ruff **PASS**, compileall **PASS**, JavaScript syntax и frontend build **PASS**, секреты/архив **PASS**, `git diff --check` **PASS**. Ни один тест не выполняет реальный API-вызов.
+- Stage 3 local preflight повторил полный набор: **28 passed**, Ruff PASS, compileall PASS, JS syntax/frontend build PASS, repository/archive security scan PASS. На Windows использован свежий pytest temp-каталог; фиксированный `--basetemp` удалён из GitHub Actions workflow.
