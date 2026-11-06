@@ -40,4 +40,6 @@ Backend валидирует host, HTTPS, порт, DNS IP, редиректы, 
 
 ## GitHub и Vercel
 
-Remote отсутствует; push и публикации не выполнялись. Подготовлена архитектура статического frontend на Vercel и отдельного Python Docker backend с постоянным `/data`, в одной кодовой базе. Это single-instance demo architecture: SQLite и in-process worker не масштабируются, а API пока не имеет аутентификации/rate limit. Требуются платный backend host, секреты в его панели, подтверждение GitHub/Vercel ресурсов, аутентификация и отдельное согласование публикации. Подробности в `DEPLOYMENT_READINESS.md`.
+Приватный репозиторий [AI-Video-Meeting-Analyzer](https://github.com/vitaliov-hash/AI-Video-Meeting-Analyzer) создан. PR #1 из `feature/dz-pro` в `main` прошёл GitHub Actions и слит в commit `80e15afe303431df2a29e2076874ec539e18217c`; Lite tag `dz-lite-v1` сохранён. PR и post-merge runs завершились успешно. Защита ветки недоступна для private repo на текущем GitHub plan (HTTP 403 требует Pro), ограничение не обходилось.
+
+Vercel/backend не развёртывались. Подготовлена архитектура статического frontend на Vercel и отдельного Python Docker backend с постоянным `/data`, в одной кодовой базе. Это single-instance demo architecture: SQLite и in-process worker не масштабируются, а API пока не имеет аутентификации/rate limit. До публичного запуска нужны backend authentication, limits, постоянное хранение, секреты и отдельное согласование. Подробности в `DEPLOYMENT_READINESS.md`.

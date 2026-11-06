@@ -44,27 +44,17 @@ Vercel раздаёт только frontend: Python, Whisper и длительн
 
 ## GitHub статус
 
-Локальная ветка `feature/dz-pro` содержит Pro commit `33df13f` (поверх Pro реализации `17a89b7`); локальная `main` создана от Lite tag и указывает на `e56ba54`. Тег `dz-lite-v1` сохранён. Подключённый GitHub connector подтверждает аккаунт `vitaliov-hash`; точного репозитория проекта среди доступных не найдено. Remote отсутствует. GitHub CLI установлен, но `gh auth status` обнаруживает недействительный сохранённый token, поэтому создать private repo и выполнить push/PR пока нельзя. Workflow проходит статические проверки; после авторизации останется выполнить CI на GitHub и проверить branch protection. Публичный доступ не разрешён.
+Приватный репозиторий: [AI-Video-Meeting-Analyzer](https://github.com/vitaliov-hash/AI-Video-Meeting-Analyzer). В нём `main` из Lite checkpoint, `feature/dz-pro` с Pro, сохранённый tag `dz-lite-v1`. PR #1 прошёл все CI шаги и слит обычным merge commit `80e15afe303431df2a29e2076874ec539e18217c`. CI run IDs: `42262127724` (PR), `42262426419` (post-merge `main`); оба завершились success.
 
-После повторной авторизации GitHub CLI создайте Private repo `AI-Video-Meeting-Analyzer` в `vitaliov-hash` без README/.gitignore/license и подключите remote. Затем отправьте Lite `main`, Pro feature branch и существующий Lite tag:
-
-```powershell
-git remote add origin https://github.com/vitaliov-hash/AI-Video-Meeting-Analyzer.git
-git push -u origin main
-git push -u origin feature/dz-pro
-git push origin refs/tags/dz-lite-v1:refs/tags/dz-lite-v1
-```
-
-Первая команда push создаёт `main` из исторически сохранённого Lite tag; вторая отправляет Pro feature branch. Эти команды подготовлены, но не запускались. Затем открыть PR `feature/dz-pro` → `main`, проверить Actions и review; не использовать auto-merge.
+Защита `main` не включена: GitHub API отказал с HTTP 403 и сообщением, что branch protection для приватного репозитория требует GitHub Pro. Публичность не включалась, ограничение плана не обходилось. Слияние сделано только после успешного PR CI. Рабочее дерево чистое; local `main` синхронизирована с remote.
 
 ## Действия перед подключением/публикацией
 
-1. Повторно авторизовать GitHub CLI в аккаунте `vitaliov-hash`, создать private repository, подключить remote и отправить только проверенные исходники.
-2. Выбрать VPS/Docker hosting и проверить его актуальные цену, доступность постоянного диска, регион и ограничения времени/CPU.
-3. Включить Pull Request workflow и required checks, настроить защиту `main` в возможностях выбранного GitHub plan.
-4. Создать Vercel project для статического frontend и задать `PUBLIC_API_BASE_URL`.
-5. Создать backend service с постоянным volume, HTTPS и точным `CORS_ALLOWED_ORIGINS`; добавить API key в backend secrets.
-6. До передачи публичной ссылки добавить и проверить серверную аутентификацию/rate limits и подтвердить права на демонстрационное видео.
-7. Выполнить deployment и end-to-end smoke только после отдельного подтверждения конкретных ресурсов, расходов и публичной видимости.
+1. При необходимости перейти на GitHub Pro, чтобы включить protection/required checks для приватной `main`; текущий план GitHub это блокирует.
+2. Выбрать VPS/Docker hosting и проверить его актуальные цену, постоянный диск, регион и ограничения CPU.
+3. Создать Vercel project только после отдельного согласования и задать `PUBLIC_API_BASE_URL`.
+4. Создать backend service с постоянным volume, HTTPS и точным `CORS_ALLOWED_ORIGINS`; добавить API key только в backend secrets.
+5. До публичной ссылки добавить и проверить server-side authentication/rate limits, ограничители расходов и подтвердить права на видео.
+6. Выполнить deployment и end-to-end smoke только после отдельного подтверждения ресурсов, расходов и публичной видимости.
 
-Ни GitHub remote, ни hosting project, ни публичный deployment пока не создавались.
+GitHub repository создан и остаётся private. Hosting project и публичный deployment не создавались.

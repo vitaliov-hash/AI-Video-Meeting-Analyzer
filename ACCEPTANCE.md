@@ -14,7 +14,7 @@
 | A6 | Grounding | Сверить реальный summary с исходной записью | **PARTIAL** — ручная сверка нового EN Cloud E2E завершена (см. аудит ниже): общий смысл основан на записи, но найдены неверное имя ASR, несогласованные числа и ошибка классификации категории. Строгая автоматическая word-overlap эвристика не прошла. RU summary отдельно не пересматривался в этом этапе. |
 | A7 | Persistence | Сохранить transcript в SQLite и перечитать новой копией store | **PASS** — имя/статус/язык/транскрипт пережили повторное открытие DB; unit-тест round-trip также PASS. Summary будет доступен тем же способом после реального вызова. |
 | A8 | Статусы и ошибки | Невалидный формат, отсутствующий API key | **PASS** — API проверяет формат; статус error сохраняет транскрипт и язык; UI содержит повторную загрузку. Визуальная браузерная проверка отдельно не выполнена. |
-| A9 | Privacy | Secrets scan и Git status/history | **PASS** — secrets/local-data scan прошёл по рабочему дереву, архиву и Git history; `.env`, DB, модели, видео, результаты и private Drive ID отсутствуют в commit/ZIP. Git remote не настроен. |
+| A9 | Privacy | Secrets scan и Git status/history | **PASS** — secrets/local-data scan прошёл по рабочему дереву, Pro ZIP и достижимой Git history; `.env`, DB, модели, видео, результаты и private Drive ID отсутствуют в commit/ZIP. Проверенная история опубликована в приватном remote. |
 
 ## AI evals (без платных запросов)
 
@@ -56,7 +56,7 @@
 | Повторное использование Lite pipeline | **PASS (live E2E)** | По скачанному файлу реально выполнен Faster-Whisper, затем один реальный вызов DeepSeek; фазы прошли `downloading → transcription → ai → ready`. |
 | Этапы, источник, историю | **PASS (live E2E)** | `source=cloud`, результат и английская транскрипция сохранены в SQLite; GET страницы, списка и карточки после обработки вернули встречу со статусом `ready`. |
 | Защита от повторного анализа | **PASS (live E2E)** | Повтор той же нормализованной ссылки вернул ту же встречу с `duplicate=true`; число DeepSeek запросов осталось 1. |
-| GitHub и Vercel подготовка | **PARTIAL** | Локальный workflow, Vercel static build и Docker backend конфигурации подготовлены. Push/deploy не выполнялись; GitHub remote отсутствует. Перед публикацией нужны API authentication/rate limits, hosting, persistent volume, secrets и явное подтверждение. |
+| GitHub и Vercel подготовка | **PASS / deployment pending** | Private GitHub repo создан, Lite `main`, Pro branch и Lite tag отправлены; PR #1 прошёл Actions и слит. Защита branch не поддержана текущим планом для private repo (HTTP 403; не обходилась). Vercel/backend не развёрнуты; перед публичным запуском нужны auth/rate limits, hosting, persistent volume и secrets. |
 
 ### Живой Cloud E2E — 2026-11-06
 
@@ -95,4 +95,4 @@
 - HTTPX/HTTPCore logger families (`httpx`, `httpcore`, `httpx2`, `httpcore2`) и Uvicorn access logger отключены; приложение журналирует только тип события/исключения, без URL, IP и ID встречи. Системные журналы не удалялись.
 - Тесты `tests/test_logging_privacy.py` проверяют подавление HTTP request logs и отсутствие фиктивных URL, bearer/API key и ID встречи в журнале ошибки облачного импорта.
 - Итоговый Quality Gate: pytest **28 passed**, Ruff **PASS**, compileall **PASS**, JavaScript syntax и frontend build **PASS**, секреты/архив **PASS**, `git diff --check` **PASS**. Ни один тест не выполняет реальный API-вызов.
-- Stage 3 local preflight повторил полный набор: **28 passed**, Ruff PASS, compileall PASS, JS syntax/frontend build PASS, repository/archive security scan PASS. На Windows использован свежий pytest temp-каталог; фиксированный `--basetemp` удалён из GitHub Actions workflow.
+- Stage 3 local preflight повторил полный набор: **28 passed**, Ruff PASS, compileall PASS, JS syntax/frontend build PASS, repository/archive security scan PASS. На Windows использован свежий pytest temp-каталог; фиксированный `--basetemp` удалён из GitHub Actions workflow. GitHub Actions `checks` прошёл на PR и post-merge `main` (runs `42262127724`, `42262426419`).
