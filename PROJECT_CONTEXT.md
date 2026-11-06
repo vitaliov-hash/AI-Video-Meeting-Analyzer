@@ -28,13 +28,13 @@ DZ Light частично реализован: локальная одност�
 
 - Ruff: PASS; pytest: **11 passed**; compileall: PASS; JS syntax: PASS.
 - HTTP runtime smoke: PASS (страница/API 200).
-- STT small CPU int8: RU 4:46 → 4 508 chars, `ru` p=.99; EN 4:02 → 3 325 chars, `en` p=.99. QA SQLite пережила повторное открытие; временные QA артефакты будут удалены.
+- STT small CPU int8: RU 4:46 → 4 508 chars, `ru` p=.99; EN 4:02 → 3 325 chars, `en` p=.99. QA SQLite пережила повторное открытие; тестовые базы удалены.
 - AI response structure/eval mocks: PASS. Реальная summary и экспертная проверка grounding: BLOCKED до разрешённого обращения к AI API.
 - Secrets scan: PASS. Подробнее в `ACCEPTANCE.md`.
 
 ## Git/GitHub/Deploy
 
-Локальный репозиторий и ветка `feature/dz-light` созданы. Коммит/remote/GitHub не настроены. Никакой публикации/deploy.
+Локальный репозиторий и ветка `feature/dz-light`; root commit `adf0246` создан после Local Quality Gate. Remote/GitHub не настроены, push/PR не выполнялись. Никакой публикации/deploy.
 
 ## Известные ограничения/блокеры
 
