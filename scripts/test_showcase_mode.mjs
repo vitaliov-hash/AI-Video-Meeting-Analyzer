@@ -51,6 +51,7 @@ function createHarness(saved = {}, mode = 'showcase') {
     },
     Intl,
     Date,
+    Headers,
     URLSearchParams,
   };
   vm.runInNewContext(appSource, context, { filename: 'static/app.js' });
@@ -89,4 +90,11 @@ assert.deepEqual(live.requests.map(request => request.url), ['/api/meetings']);
 assert.equal(typeof live.elements.get('#video-file').listeners.change, 'function', 'live mode keeps manual upload active');
 assert.equal(typeof live.elements.get('#cloud-form').listeners.submit, 'function', 'live mode keeps cloud import active');
 assert.notEqual(live.document.documentElement.dataset.appMode, 'showcase');
-console.log('Showcase behavior checks passed: RU/EN history, draft/reviewed labels, no API requests, and persistence after reload.');
+
+const teacher = createHarness({}, 'teacher-preview');
+assert.equal(teacher.requests.length, 0, 'Teacher Preview waits for login before requesting data');
+assert.equal(typeof teacher.elements.get('#teacher-login').listeners.submit, 'function', 'teacher login form is available');
+assert.equal(teacher.document.documentElement.dataset.appMode, 'teacher-preview');
+assert.doesNotMatch(appSource, /localStorage/i, 'teacher bearer tokens are not persisted in browser storage');
+assert.match(appSource, /Authorization/);
+console.log('Frontend behavior checks passed: Showcase isolation/persistence, live Lite/Pro forms, and gated Teacher Preview.');

@@ -5,8 +5,17 @@ const input = document.querySelector('#video-file');
 const cloudForm = document.querySelector('#cloud-form');
 const cloudUrl = document.querySelector('#cloud-url');
 const cloudSubmit = document.querySelector('#cloud-submit');
+const teacherMode = window.APP_CONFIG?.mode === 'teacher-preview';
+const teacherLoginForm = document.querySelector('#teacher-login');
+const teacherPassword = document.querySelector('#teacher-password');
+const teacherLoginSubmit = document.querySelector('#teacher-login-submit');
+const teacherLoginError = document.querySelector('#teacher-login-error');
+const teacherSession = document.querySelector('#teacher-session');
+const teacherSessionStatus = document.querySelector('#teacher-session-status');
+const teacherLogout = document.querySelector('#teacher-logout');
 let meetings = [];
 let selectedId = null;
+let teacherToken = null;
 const apiBaseUrl = String(window.APP_CONFIG?.apiBaseUrl || '').replace(/\/$/, '');
 const apiUrl = path => `${apiBaseUrl}${path}`;
 const labels = {processing:'Обрабатывается',ready:'Готово',error:'Ошибка'};
@@ -15,10 +24,80 @@ const phaseLabels = {downloading:'Получение файла',transcription:'
 
 function esc(value='') { return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function date(value) { return new Intl.DateTimeFormat('ru-RU',{dateStyle:'medium',timeStyle:'short'}).format(new Date(value)); }
+function utcDate(value) { return new Intl.DateTimeFormat('ru-RU',{dateStyle:'medium',timeStyle:'short',timeZone:'UTC'}).format(new Date(value)); }
 function statusMarkup(status) { return `<span class="status ${status}"><i class="dot"></i>${labels[status]||'Ошибка'}</span>`; }
 
+function setTeacherAuthenticated(authenticated) {
+  if (!teacherMode) return;
+  document.documentElement.dataset.authenticated = authenticated ? 'true' : 'false';
+  teacherLoginForm.hidden = authenticated;
+  teacherSession.hidden = !authenticated;
+  if (!authenticated) {
+    teacherToken = null;
+    meetings = [];
+    selectedId = null;
+    list.innerHTML = '';
+    details.innerHTML = '<div class="empty"><h2>Войдите для доступа к встречам</h2></div>';
+  }
+}
+
+async function apiRequest(path, options={}) {
+  const headers = new Headers(options.headers || {});
+  if (teacherMode) {
+    if (!teacherToken) throw new Error('Войдите в Teacher Demo.');
+    headers.set('Authorization', `Bearer ${teacherToken}`);
+  }
+  const response = await fetch(apiUrl(path), {...options, headers});
+  if (teacherMode && [401,410,503].includes(response.status)) {
+    setTeacherAuthenticated(false);
+    showNotice(response.status === 410 ? 'Срок Teacher Demo завершён.' : response.status === 503
+      ? 'Teacher Demo отключён владельцем.' : 'Срок входа истёк. Войдите снова.');
+  }
+  return response;
+}
+
+async function refreshTeacherStatus() {
+  const response = await apiRequest('/api/teacher-demo/status');
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.detail || 'Не удалось проверить срок Teacher Demo.');
+  teacherSessionStatus.textContent = `Осталось анализов: ${result.analyses_remaining} из 2 · доступ до ${utcDate(result.expires_at)} UTC`;
+}
+
+if (teacherMode) {
+  teacherLoginForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    teacherLoginError.hidden = true;
+    teacherLoginSubmit.disabled = true;
+    try {
+      const response = await fetch(apiUrl('/api/teacher-demo/login'), {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({password:teacherPassword.value}),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.detail || 'Не удалось войти.');
+      teacherToken = result.access_token;
+      teacherPassword.value = '';
+      setTeacherAuthenticated(true);
+      await refreshTeacherStatus();
+      hideNotice();
+      poll();
+    } catch(error) {
+      teacherToken = null;
+      teacherLoginError.textContent = error.message || 'Не удалось войти.';
+      teacherLoginError.hidden = false;
+      setTeacherAuthenticated(false);
+    } finally {
+      teacherLoginSubmit.disabled = false;
+    }
+  });
+  teacherLogout.addEventListener('click', () => {
+    setTeacherAuthenticated(false);
+    hideNotice();
+  });
+}
+
 async function loadMeetings() {
-  const response = await fetch(apiUrl('/api/meetings'));
+  const response = await apiRequest('/api/meetings');
   if (!response.ok) throw new Error('Не удалось загрузить историю встреч.');
   meetings = await response.json();
   document.querySelector('#meeting-count').textContent = meetings.length;
@@ -30,7 +109,7 @@ async function loadMeetings() {
 
 async function selectMeeting(id) {
   selectedId = id;
-  const response = await fetch(apiUrl(`/api/meetings/${encodeURIComponent(id)}`));
+  const response = await apiRequest(`/api/meetings/${encodeURIComponent(id)}`);
   if (!response.ok) { showNotice('Не удалось открыть эту встречу. Обновите список и попробуйте снова.'); return; }
   renderDetails(await response.json());
   await loadMeetings();
@@ -56,7 +135,7 @@ input.addEventListener('change', async () => {
   if (!['mp4','webm'].includes(ext)) { showNotice('Выберите видео в формате MP4 или WebM.'); input.value=''; return; }
   const form=new FormData(); form.append('file',file);
   try {
-    const response=await fetch(apiUrl('/api/meetings'),{method:'POST',body:form});
+    const response=await apiRequest('/api/meetings',{method:'POST',body:form});
     const result=await response.json();
     if (!response.ok) throw new Error(result.detail||'Не удалось загрузить видео.');
     selectedId=result.id; await loadMeetings(); await selectMeeting(result.id);
@@ -69,7 +148,7 @@ cloudForm.addEventListener('submit', async event => {
   hideNotice(); cloudSubmit.disabled=true;
   const original=cloudSubmit.textContent; cloudSubmit.textContent='Добавление…';
   try {
-    const response=await fetch(apiUrl('/api/meetings/cloud'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:cloudUrl.value.trim()})});
+    const response=await apiRequest('/api/meetings/cloud',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:cloudUrl.value.trim()})});
     const result=await response.json();
     if (!response.ok) throw new Error(result.detail||'Не удалось добавить видео из облака.');
     selectedId=result.id;
@@ -81,12 +160,16 @@ cloudForm.addEventListener('submit', async event => {
 }
 
 async function poll() {
+  if (teacherMode && !teacherToken) return;
   try { await loadMeetings(); }
   catch(error) { showNotice(error.message); }
-  window.setTimeout(poll,2200);
+  if (!teacherMode || teacherToken) window.setTimeout(poll,2200);
 }
 if (window.APP_CONFIG?.mode === 'showcase') {
   document.documentElement.dataset.appMode = 'showcase';
+} else if (teacherMode) {
+  document.documentElement.dataset.appMode = 'teacher-preview';
+  setTeacherAuthenticated(false);
 } else {
   poll();
 }

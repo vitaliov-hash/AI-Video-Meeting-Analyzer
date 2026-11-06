@@ -6,6 +6,9 @@ from typing import Any
 
 import httpx
 
+from ..config import settings
+from ..teacher_demo import MAX_OUTPUT_TOKENS, MAX_PROMPT_UTF8_BYTES
+
 
 class SummaryProvider:
     def summarize(self, transcript: str, language: str) -> dict[str, Any]:
@@ -17,8 +20,14 @@ class ConfiguredSummaryProvider(SummaryProvider):
         self.provider = provider
 
     def summarize(self, transcript: str, language: str) -> dict[str, Any]:
+        if (settings.teacher_demo_enabled
+                and len(transcript) > settings.teacher_demo_max_transcript_chars):
+            raise ValueError("Транскрипт превышает ограничение Teacher Demo; AI-запрос не отправлен.")
         system_prompt = (Path(__file__).resolve().parents[2] / "prompts" / "meeting_summary.md").read_text(encoding="utf-8")
         prompt = f"Язык распознавания: {language}\n\nТранскрипт:\n{transcript}"
+        if (settings.teacher_demo_enabled
+                and len((system_prompt + prompt).encode("utf-8")) > MAX_PROMPT_UTF8_BYTES):
+            raise ValueError("Промпт превышает жёсткий лимит Teacher Demo; AI-запрос не отправлен.")
         raw = self._request(prompt, system_prompt)
         summary = validate_summary(raw)
         empty_phrase = "В записи это не прозвучало." if language.lower().startswith("ru") else "Not stated in the recording."
@@ -27,6 +36,9 @@ class ConfiguredSummaryProvider(SummaryProvider):
         return summary
 
     def _request(self, prompt: str, system_prompt: str) -> str:
+        max_output_tokens = settings.ai_max_output_tokens
+        if settings.teacher_demo_enabled:
+            max_output_tokens = min(max_output_tokens, MAX_OUTPUT_TOKENS)
         if self.provider in ("deepseek", "openai"):
             env_prefix = "DEEPSEEK" if self.provider == "deepseek" else "OPENAI"
             key = os.getenv(f"{env_prefix}_API_KEY", "").strip()
@@ -39,7 +51,7 @@ class ConfiguredSummaryProvider(SummaryProvider):
                 "messages": [{"role": "system", "content": system_prompt},
                              {"role": "user", "content": prompt}],
                 "response_format": {"type": "json_object"},
-                "max_tokens": 1600,
+                "max_tokens": max_output_tokens,
             }
             if self.provider == "deepseek":
                 payload["thinking"] = {"type": "disabled"}
@@ -61,7 +73,7 @@ class ConfiguredSummaryProvider(SummaryProvider):
                 response = httpx.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                     headers={"x-goog-api-key": key}, json={"systemInstruction": {"parts": [{"text": system_prompt}]},
                             "contents": [{"parts": [{"text": prompt}]}],
-                            "generationConfig": {"maxOutputTokens": 1600, "responseMimeType": "application/json"}}, timeout=180)
+                            "generationConfig": {"maxOutputTokens": max_output_tokens, "responseMimeType": "application/json"}}, timeout=180)
                 response.raise_for_status()
             except httpx.HTTPStatusError as exc:
                 raise RuntimeError(f"AI-провайдер вернул ошибку HTTP {exc.response.status_code}. Проверьте ключ и модель.") from None

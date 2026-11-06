@@ -12,10 +12,13 @@ const node = process.execPath;
 let buildSequence = 0;
 async function runBuild(args, extraEnv = {}) {
   const originalArgv = process.argv;
-  const originalApi = process.env.PUBLIC_API_BASE_URL;
+  const envKeys = ['PUBLIC_API_BASE_URL', 'VERCEL_ENV', 'TEACHER_PREVIEW_BUILD'];
+  const originalEnv = Object.fromEntries(envKeys.map(key => [key, process.env[key]]));
   process.argv = [node, build, ...args];
-  if (Object.hasOwn(extraEnv, 'PUBLIC_API_BASE_URL')) process.env.PUBLIC_API_BASE_URL = extraEnv.PUBLIC_API_BASE_URL;
-  else delete process.env.PUBLIC_API_BASE_URL;
+  for (const key of envKeys) {
+    if (Object.hasOwn(extraEnv, key)) process.env[key] = extraEnv[key];
+    else delete process.env[key];
+  }
   try {
     await import(`${pathToFileURL(build).href}?verification=${++buildSequence}`);
     return { status: 0, stderr: '' };
@@ -23,8 +26,10 @@ async function runBuild(args, extraEnv = {}) {
     return { status: 1, stderr: error.message };
   } finally {
     process.argv = originalArgv;
-    if (originalApi === undefined) delete process.env.PUBLIC_API_BASE_URL;
-    else process.env.PUBLIC_API_BASE_URL = originalApi;
+    for (const key of envKeys) {
+      if (originalEnv[key] === undefined) delete process.env[key];
+      else process.env[key] = originalEnv[key];
+    }
   }
 }
 
@@ -59,6 +64,25 @@ assert.match(showcaseCss, /@media\(max-width:760px\).*html\[data-app-mode="showc
 result = await runBuild(['--showcase'], { PUBLIC_API_BASE_URL: 'https://api.example.invalid' });
 assert.notEqual(result.status, 0, 'showcase refuses a configured backend');
 assert.match(result.stderr, /must not include a backend API URL/);
+
+result = await runBuild(['--vercel'], {
+  VERCEL_ENV: 'production', TEACHER_PREVIEW_BUILD: '1',
+});
+assert.equal(result.status, 0, result.stderr);
+assert.deepEqual(config(), { apiBaseUrl: '', mode: 'showcase' }, 'production cannot become Teacher Preview');
+
+result = await runBuild(['--vercel'], {
+  VERCEL_ENV: 'preview', TEACHER_PREVIEW_BUILD: '1',
+  PUBLIC_API_BASE_URL: 'https://api.example.invalid',
+});
+assert.equal(result.status, 0, result.stderr);
+assert.deepEqual(config(), { apiBaseUrl: 'https://api.example.invalid', mode: 'teacher-preview' });
+assert.equal(existsSync(resolve(staticOutput, 'demo-data.json')), false, 'Teacher Preview excludes public showcase data');
+assert.match(readFileSync(resolve(output, 'index.html'), 'utf8'), /teacher-login/);
+
+result = await runBuild(['--teacher-preview']);
+assert.notEqual(result.status, 0, 'Teacher Preview refuses a missing backend origin');
+assert.match(result.stderr, /requires PUBLIC_API_BASE_URL/);
 
 // Leave the Vercel deployment artifact in its intended Showcase configuration.
 result = await runBuild(['--showcase']);

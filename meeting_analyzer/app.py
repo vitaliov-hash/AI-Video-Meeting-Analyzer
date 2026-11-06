@@ -7,10 +7,11 @@ from threading import Lock
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 from .cloud_import import (
     CloudImportError,
@@ -20,6 +21,7 @@ from .cloud_import import (
 from .config import ROOT, settings
 from .pipeline import process_video
 from .storage import MeetingStore
+from .teacher_demo import TeacherBodyLimitMiddleware, TeacherDemoGuard
 
 logging.basicConfig(level=logging.INFO)
 # HTTP client request logs include full URLs. Never send those through application logs.
@@ -33,6 +35,7 @@ for logger_name in ("httpx", "httpcore", "httpx2", "httpcore2", "uvicorn.access"
             existing_logger.disabled = True
 log = logging.getLogger("meeting-analyzer")
 store = MeetingStore(settings.data_dir / "meetings.sqlite3")
+teacher_guard = TeacherDemoGuard(settings)
 executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="meeting-analysis")
 processing_lock = Lock()
 ALLOWED = {".mp4", ".webm"}
@@ -48,6 +51,7 @@ def _remove_upload(path: Path):
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    teacher_guard.initialize()
     recovered = store.recover_interrupted()
     if recovered:
         log.info("Marked %s interrupted meeting(s) as failed", recovered)
@@ -59,15 +63,90 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="AI Video Meeting Analyzer", lifespan=lifespan)
+app = FastAPI(
+    title="AI Video Meeting Analyzer",
+    lifespan=lifespan,
+    docs_url=None if settings.teacher_demo_enabled else "/docs",
+    redoc_url=None if settings.teacher_demo_enabled else "/redoc",
+    openapi_url=None if settings.teacher_demo_enabled else "/openapi.json",
+)
+app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
+
+
+class TeacherLogin(BaseModel):
+    password: str = Field(min_length=1, max_length=256)
+
+
+@app.middleware("http")
+async def teacher_api_security(request: Request, call_next):
+    if teacher_guard.enabled and request.url.path.startswith("/api/") and request.method != "OPTIONS":
+        try:
+            login_route = request.url.path == "/api/teacher-demo/login"
+            teacher_guard.check_rate(request, "login" if login_route else "api")
+            if not login_route and not teacher_guard.authenticate(request.headers.get("authorization")):
+                return JSONResponse(
+                    {"detail": "Войдите в Teacher Demo."}, status_code=401,
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            if request.method == "POST":
+                path_limits = {
+                    "/api/teacher-demo/login": 1024,
+                    "/api/meetings/cloud": 8192,
+                    "/api/meetings": settings.max_upload_mb * 1024 * 1024 + 65536,
+                }
+                limit = path_limits.get(request.url.path, 8192)
+                content_length = request.headers.get("content-length")
+                if content_length:
+                    try:
+                        if int(content_length) > limit:
+                            return JSONResponse(
+                                {"detail": "Размер запроса превышает ограничение Teacher Demo."},
+                                status_code=413,
+                            )
+                    except ValueError:
+                        return JSONResponse({"detail": "Некорректный Content-Length."}, status_code=400)
+        except HTTPException as exc:
+            return JSONResponse({"detail": exc.detail}, status_code=exc.status_code, headers=exc.headers)
+    return await call_next(request)
+
+
+# Stream bounds protect multipart parsing even when Content-Length is omitted.
+app.add_middleware(
+    TeacherBodyLimitMiddleware,
+    guard=teacher_guard,
+    upload_limit_bytes=settings.max_upload_mb * 1024 * 1024,
+)
+
+# CORS wraps the auth middleware so preflight and authorized responses carry exact-origin headers.
 if settings.cors_allowed_origins:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(settings.cors_allowed_origins),
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type"],
+        allow_headers=["Content-Type", "Authorization"],
     )
-app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
+
+
+@app.post("/api/teacher-demo/login")
+def teacher_login(payload: TeacherLogin, request: Request):
+    if not teacher_guard.enabled:
+        raise HTTPException(404, "Teacher Demo не включён.")
+    if not teacher_guard.verify_password(payload.password):
+        raise HTTPException(401, "Неверный пароль.")
+    token, expires_at = teacher_guard.issue_token()
+    status = teacher_guard.status()
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "expires_at": expires_at,
+        "analyses_remaining": status["analyses_remaining"],
+        "session_expires_at": status["expires_at"],
+    }
+
+
+@app.get("/api/teacher-demo/status")
+def teacher_status():
+    return teacher_guard.status()
 
 
 @app.get("/")
@@ -115,6 +194,7 @@ async def upload(file: Annotated[UploadFile, File()]):
                 target.write(chunk)
         if total == 0:
             raise HTTPException(400, "Файл пустой. Выберите видео и попробуйте снова.")
+        teacher_guard.reserve_analysis()
         meeting_value = store.create(filename, phase="transcription")
         executor.submit(_process_and_release, meeting_value["id"], temp_path)
         submitted = True
@@ -153,6 +233,7 @@ async def upload_from_cloud(payload: dict):
     if not processing_lock.acquire(blocking=False):
         raise HTTPException(409, "Уже обрабатывается одна встреча. Дождитесь завершения и повторите импорт.")
     try:
+        teacher_guard.reserve_analysis()
         try:
             record = store.create("Видео из Google Drive", source="cloud",
                                   source_url=normalized, phase="downloading")

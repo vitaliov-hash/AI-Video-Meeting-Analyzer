@@ -44,8 +44,16 @@ Showcase собирается как полностью статический �
 
 В Showcase нет загрузки видео, импорта из Drive, опроса `/api/meetings` или вызовов Faster-Whisper/DeepSeek. Переход между встречами и конспектами работает на статических примерах; выбранная встреча и версия конспекта переживают обновление страницы. Два варианта каждого конспекта подписаны как статический пример и редакторская версия; сайт прямо сообщает, что это не результат его AI-обработки.
 
-`vercel.json` запускает именно Showcase build. Для этого режима запрещена `PUBLIC_API_BASE_URL`; артефакт пересоздаётся с нуля и не содержит backend-функций. Полная интеграция живого Pro остаётся локальной и не включается в публичный Showcase. Требования до возможной активации Teacher Live Demo перечислены в `DEMO_MODES.md` и `DEPLOYMENT_READINESS.md`.
+`vercel.json` запускает guarded Vercel build. По умолчанию он создаёт статический Showcase и отвергает API URL. Teacher Preview выбирается только при `VERCEL_ENV=preview` и `TEACHER_PREVIEW_BUILD=1`; production Vercel всегда остаётся Showcase. Для локальной проверки фронтенда Teacher Preview используйте `PUBLIC_API_BASE_URL=https://example.invalid node scripts/build_frontend.mjs --teacher-preview`. Это только сборка, она не запускает backend и не делает сетевых запросов.
 
-Проверки: `node scripts/test_showcase_mode.mjs` и `node scripts/verify_frontend_build.mjs`. Для бесплатной Vercel-публикации используйте только Hobby план; проект не должен просить карту или переход на платный тариф. До подключения аккаунта и получения реального URL публикация считается неподтверждённой.
+Проверки: `node scripts/test_showcase_mode.mjs` и `node scripts/verify_frontend_build.mjs`. Для бесплатной Vercel-публикации используйте только Hobby план; проект не должен просить карту или переход на платный тариф. На `main` GitHub Vercel status сейчас success, но точный frontend URL нужно подтвердить и внести в `TEACHER_HANDOUT.md`.
 
-Скриншоты локальной синтетической сборки: [RU](docs/showcase/ru-desktop.png), [EN](docs/showcase/en-reviewed-desktop.png), [мобильная ширина 390 px](docs/showcase/mobile-390.png). Это не скриншоты опубликованного Vercel сайта.
+Скриншоты локальной синтетической сборки: [RU](docs/showcase/ru-desktop.png), [EN](docs/showcase/en-reviewed-desktop.png), [мобильная ширина 390 px](docs/showcase/mobile-390.png). Это не доказательство Cloud E2E.
+
+## Teacher Live Demo — подготовлен, выключен
+
+Teacher Preview собран как отдельный закрытый режим интерфейса. Backend по умолчанию не включает его (`TEACHER_DEMO_ENABLED=false`). При включении он требует сильный пароль, отдельный HMAC secret, один точный HTTPS CORS origin, DeepSeek provider и loopback bind. Все `/api/*` запросы, включая неизвестные API пути, закрыты до чтения тела запроса; login rate-limited. Данные пишутся только в `.teacher-demo-data`, отдельно от личной `data/` базы.
+
+На весь демонстрационный срок допускаются не более двух новых обработок. Слот резервируется атомарно и сохраняется между перезапусками; повторная нормализованная Drive-ссылка использует прежний результат. Срок по умолчанию пять суток, абсолютный максимум семь; сервер выдаёт bearer-токен максимум на восемь часов. Размер файла ограничивается `MAX_UPLOAD_MB` (для режима требуется до 100 MB), транскрипт — до 8 000 символов, AI-промпт — до 32 000 UTF-8 байтов, ответ — максимум 600 токенов. Kill switch: `python -m meeting_analyzer.teacher_demo --disable`.
+
+Для одноразового бесплатного подключения предполагается Cloudflare Quick Tunnel до локального Windows backend; ПК, backend и tunnel должны оставаться запущенными. Quick Tunnel временный и без SLA. Живой backend, tunnel и Teacher Preview deployment не активированы и не проверены end-to-end. Не включайте их до отдельного подтверждения, проверки прав на запись и настройки отдельного teacher-preview Vercel проекта.
