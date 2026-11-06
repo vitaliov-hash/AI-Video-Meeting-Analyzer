@@ -1,0 +1,23 @@
+.showcase-only{display:none}
+html[data-app-mode="showcase"] .live-only{display:none!important}
+html[data-app-mode="showcase"] .showcase-only{display:block}
+html[data-app-mode="showcase"] .eyebrow.showcase-only{display:block}
+.showcase-notice{margin:0 0 24px;padding:16px 18px;border:1px solid #cfe2d5;border-radius:12px;background:#eef7f0;color:#245b40}
+.showcase-notice strong{display:block;margin-bottom:6px;font-size:14px}
+.showcase-notice p{margin:0;color:#456852;font-size:13px;line-height:1.55}
+.showcase-empty{padding:18px;color:var(--muted);font-size:13px;line-height:1.5}
+.summary-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.summary-tab{border:1px solid var(--line);border-radius:8px;background:#fff;color:#435149;padding:8px 11px;font:600 12px "Segoe UI",sans-serif;cursor:pointer}
+.summary-tab[aria-selected="true"]{border-color:#8cbaa0;background:#eef7f0;color:#176c4e}
+.summary-provenance{margin:0 0 17px;padding:10px 12px;border-radius:9px;background:#f5f7f4;color:#68766d;font-size:12px;line-height:1.5}
+.editorial-notes{margin-top:18px;padding:13px 15px;border:1px solid #f0e4c7;border-radius:10px;background:#fffaf0;color:#705b2e;font-size:12px;line-height:1.55}
+.editorial-notes strong{display:block;margin-bottom:5px}
+.meeting{overflow:hidden}
+.meeting-meta{gap:5px;flex-wrap:wrap;justify-content:flex-start}
+.meeting-meta>.source-label{max-width:78px;overflow-wrap:anywhere}
+html[data-app-mode="showcase"] .shell{width:min(100%,1100px);min-width:0}
+html[data-app-mode="showcase"] .layout{grid-template-columns:minmax(0,310px) minmax(0,1fr);width:100%}
+html[data-app-mode="showcase"] .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.summary-card{min-width:0;overflow-wrap:anywhere}
+@media(max-width:760px){html[data-app-mode="showcase"] .layout{grid-template-columns:minmax(0,1fr)}html[data-app-mode="showcase"] .summary-grid{grid-template-columns:minmax(0,1fr)}.history,.details,.meeting-list,.meeting{min-width:0}.detail-head{flex-direction:column}html[data-app-mode="showcase"] header p{max-width:100%;overflow-wrap:anywhere}}
+@media(max-width:430px){.showcase-notice{padding:14px}.summary-tab{flex:1 1 100%;text-align:left}}

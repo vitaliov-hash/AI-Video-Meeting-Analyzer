@@ -23,12 +23,23 @@
 
 Оценка не включает налоги, домен, резервные копии, egress сверх квоты и стоимость AI вызовов. Тариф зависит от региона/аккаунта и может измениться; до создания платного ресурса перепроверьте сумму в панели провайдера. Для одной учебной демонстрации рекомендован DO Droplet при готовности администрировать VPS.
 
+## Stage 4 — бесплатный статический Showcase
+
+Текущая ветка добавляет Showcase build на базе одной кодовой базы. `vercel.json` использует `node scripts/build_frontend.mjs --showcase`; сборка очищает `frontend-dist`, не включает API URL и кладёт в него только HTML, CSS, JavaScript и синтетический JSON с RU/EN примерами. Из Vercel bundle исключены Python API, локальная SQLite, видео, модель, DeepSeek ключ и пользовательские транскрипты.
+
+Showcase запрашивает только `/static/demo-data.json`; добавление/импорт записи и polling `/api/meetings` отключены. Это статические фиктивные примеры, не результаты AI, полученные опубликованным сайтом. Проверки сборки и поведения добавлены в CI. Публичный deployment остаётся **неподтверждённым до ручной проверки аккаунта Hobby, создания проекта и smoke-теста URL**. Не переходить на тариф, который требует карту или оплату.
+
+По актуальным официальным правилам Vercel Hobby бесплатен, предназначен для личного некоммерческого использования; персональный GitHub-репозиторий можно подключить владельцу аккаунта. Репозиторий проекта принадлежит личной учётной записи GitHub, не организации. Учебный Showcase предполагается некоммерческим. [Vercel Hobby](https://vercel.com/docs/plans/hobby), [Terms](https://vercel.com/legal/terms), [GitHub integration](https://vercel.com/docs/git/vercel-for-github), [private repositories](https://vercel.com/docs/git#deploying-private-git-repositories).
+
+Это подтверждает публичные правила, но **не фактическое состояние тарифа существующего аккаунта пользователя**. Перед созданием проекта план нужно проверить в Vercel Dashboard; если панель предлагает upgrade, карту или платный тариф, остановиться.
+
 ## Подготовленные локальные файлы
 
 Согласованные будущие режимы (не развёрнуты) описаны в `DEMO_MODES.md`: Teacher Live Demo ограничен 5 днями (максимум 7) с серверным истечением и квотами; Public Showcase показывает готовые RU/EN примеры без платных AI-вызовов и без публично вызываемых endpoints анализа. `DEMO_SUMMARY_EN_REVIEWED.md` — отдельная редакторская EN-демонстрация; исходные AI-результаты не менялись.
 
-- `vercel.json` собирает статический frontend командой `node scripts/build_frontend.mjs`.
-- `scripts/build_frontend.mjs` принимает `PUBLIC_API_BASE_URL`, проверяет HTTPS и создаёт runtime-конфиг без секретов.
+- `vercel.json` собирает безопасный Showcase через `node scripts/build_frontend.mjs --showcase`.
+- `scripts/build_frontend.mjs` сохраняет обычный live frontend build для локальной интеграции, но Showcase запрещает `PUBLIC_API_BASE_URL`.
+- `scripts/test_showcase_mode.mjs` проверяет RU/EN историю, смену версии summary, отсутствие запросов к `/api` и сохранение выбора после перезагрузки; `scripts/verify_frontend_build.mjs` проверяет изоляцию артефактов обоих режимов.
 - `Dockerfile` собирает Python backend и запускает его на `0.0.0.0:8000` с постоянным `/data`.
 - `.dockerignore` исключает исходное видео, базы, ключи, модели и локальное окружение из Docker context.
 - `.github/workflows/quality.yml` запускает тесты, Ruff, compileall, JS/build и проверку секретов при PR в `main` и push в `main`.
@@ -48,13 +59,13 @@ Vercel раздаёт только frontend: Python, Whisper и длительн
 
 Защита `main` не включена: GitHub API отказал с HTTP 403 и сообщением, что branch protection для приватного репозитория требует GitHub Pro. Публичность не включалась, ограничение плана не обходилось. Слияние сделано только после успешного PR CI. Рабочее дерево чистое; local `main` синхронизирована с remote.
 
-## Действия перед подключением/публикацией
+## Действия для завершения Stage 4 и будущего живого режима
 
-1. При необходимости перейти на GitHub Pro, чтобы включить protection/required checks для приватной `main`; текущий план GitHub это блокирует.
-2. Выбрать VPS/Docker hosting и проверить его актуальные цену, постоянный диск, регион и ограничения CPU.
-3. Создать Vercel project только после отдельного согласования и задать `PUBLIC_API_BASE_URL`.
-4. Создать backend service с постоянным volume, HTTPS и точным `CORS_ALLOWED_ORIGINS`; добавить API key только в backend secrets.
-5. До публичной ссылки добавить и проверить server-side authentication/rate limits, ограничители расходов и подтвердить права на видео.
-6. Выполнить deployment и end-to-end smoke только после отдельного подтверждения ресурсов, расходов и публичной видимости.
+1. Проверить в существующем Vercel-аккаунте, что активен Hobby; если виден upgrade, карта или платный тариф, остановиться.
+2. Подключить приватный GitHub repository к проекту Vercel с feature branch Stage 4 как source; исходник оставить private.
+3. Убедиться, что Vercel применил `vercel.json`, собрал каталог `frontend-dist` и не просит secret variables.
+4. Проверить публичный URL: историю, RU/EN summaries, мобильную ширину, перезагрузку, отсутствие API processing endpoints и нулевые запросы к AI.
+5. Добавить фактическую ссылку и безопасные скриншоты в `TEACHER_HANDOUT.md` после верификации.
+6. Teacher Live Demo не включать до реализации авторизации, per-user квот, ограничений размера/длительности, лимита расходов, expiry (5 дней; максимум 7) и серверного kill switch.
 
-GitHub repository создан и остаётся private. Hosting project и публичный deployment не создавались.
+GitHub repository создан и остаётся private. Ветка Stage 4 готовит deployment, но Hosting project и публичный deployment будут отмечены как готовые только после реального smoke-теста Vercel URL.

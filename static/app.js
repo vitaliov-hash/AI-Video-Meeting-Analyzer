@@ -48,6 +48,7 @@ function renderDetails(m) {
 function showNotice(message) { notice.textContent=message; notice.hidden=false; }
 function hideNotice() { notice.hidden=true; }
 
+if (window.APP_CONFIG?.mode !== 'showcase') {
 input.addEventListener('change', async () => {
   const file=input.files?.[0]; if (!file) return;
   hideNotice();
@@ -77,10 +78,15 @@ cloudForm.addEventListener('submit', async event => {
   } catch(error) { showNotice(error.message||'Не удалось импортировать файл. Скачайте его и попробуйте обычную загрузку.'); }
   finally { cloudSubmit.disabled=false; cloudSubmit.textContent=original; }
 });
+}
 
 async function poll() {
   try { await loadMeetings(); }
   catch(error) { showNotice(error.message); }
   window.setTimeout(poll,2200);
 }
-poll();
+if (window.APP_CONFIG?.mode === 'showcase') {
+  document.documentElement.dataset.appMode = 'showcase';
+} else {
+  poll();
+}
