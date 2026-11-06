@@ -18,6 +18,11 @@ class Settings:
     host: str = os.getenv("HOST", "127.0.0.1")
     port: int = int(os.getenv("PORT", "8000"))
     data_dir: Path = Path(os.getenv("DATA_DIR", str(ROOT / "data")))
+    cors_allowed_origins: tuple[str, ...] = tuple(
+        origin.strip().rstrip("/")
+        for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+        if origin.strip()
+    )
 
 
 settings = Settings()

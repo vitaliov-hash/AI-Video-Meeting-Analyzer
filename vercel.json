@@ -1,0 +1,6 @@
+{
+  "buildCommand": "node scripts/build_frontend.mjs",
+  "outputDirectory": "frontend-dist",
+  "framework": null,
+  "cleanUrls": false
+}

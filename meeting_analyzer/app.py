@@ -1,24 +1,73 @@
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 from pathlib import Path
+from threading import Lock
 from typing import Annotated
 from uuid import uuid4
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from .cloud_import import (
+    CloudImportError,
+    download_google_drive_video,
+    normalize_google_drive_url,
+)
 from .config import ROOT, settings
 from .pipeline import process_video
 from .storage import MeetingStore
 
 logging.basicConfig(level=logging.INFO)
+# HTTP client request logs include full URLs. Never send those through application logs.
+for logger_name in ("httpx", "httpcore", "httpx2", "httpcore2", "uvicorn.access"):
+    http_logger = logging.getLogger(logger_name)
+    http_logger.setLevel(logging.CRITICAL)
+    http_logger.disabled = True
+    for existing_name, existing_logger in logging.Logger.manager.loggerDict.items():
+        if existing_name.startswith(f"{logger_name}.") and isinstance(existing_logger, logging.Logger):
+            existing_logger.setLevel(logging.CRITICAL)
+            existing_logger.disabled = True
 log = logging.getLogger("meeting-analyzer")
 store = MeetingStore(settings.data_dir / "meetings.sqlite3")
 executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="meeting-analysis")
-app = FastAPI(title="AI Video Meeting Analyzer")
-app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
+processing_lock = Lock()
 ALLOWED = {".mp4", ".webm"}
+PROCESSING_ERROR = "Обработка не удалась. Проверьте файл и настройки и загрузите его повторно."
+
+
+def _remove_upload(path: Path):
+    try:
+        path.unlink(missing_ok=True)
+    except OSError as exc:
+        log.error("Temporary upload cleanup failed (%s)", type(exc).__name__)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    recovered = store.recover_interrupted()
+    if recovered:
+        log.info("Marked %s interrupted meeting(s) as failed", recovered)
+    upload_dir = settings.data_dir / "uploads"
+    if upload_dir.is_dir():
+        for path in upload_dir.iterdir():
+            if path.is_file() and re.fullmatch(r"[0-9a-f]{32}\.(mp4|webm)", path.name):
+                _remove_upload(path)
+    yield
+
+
+app = FastAPI(title="AI Video Meeting Analyzer", lifespan=lifespan)
+if settings.cors_allowed_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(settings.cors_allowed_origins),
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type"],
+    )
+app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 
 
 @app.get("/")
@@ -41,16 +90,23 @@ def meeting(meeting_id: str):
 
 @app.post("/api/meetings")
 async def upload(file: Annotated[UploadFile, File()]):
-    suffix = Path(file.filename or "").suffix.lower()
-    if suffix not in ALLOWED:
-        raise HTTPException(400, "Поддерживаются только видео MP4 и WebM.")
-    filename = Path(file.filename or "meeting" + suffix).name
-    temp_name = f"{uuid4().hex}{suffix}"
-    settings.data_dir.mkdir(parents=True, exist_ok=True)
-    temp_path = settings.data_dir / temp_name
-    total = 0
-    max_bytes = settings.max_upload_mb * 1024 * 1024
+    acquired = False
+    submitted = False
+    temp_path = None
+    meeting_value = None
     try:
+        suffix = Path(file.filename or "").suffix.lower()
+        if suffix not in ALLOWED:
+            raise HTTPException(400, "Поддерживаются только видео MP4 и WebM.")
+        acquired = processing_lock.acquire(blocking=False)
+        if not acquired:
+            raise HTTPException(409, "Уже обрабатывается одна встреча. Дождитесь завершения и загрузите файл снова.")
+        filename = Path((file.filename or "meeting" + suffix).replace("\\", "/")).name
+        upload_dir = settings.data_dir / "uploads"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        temp_path = upload_dir / f"{uuid4().hex}{suffix}"
+        total = 0
+        max_bytes = settings.max_upload_mb * 1024 * 1024
         with temp_path.open("wb") as target:
             while chunk := await file.read(1024 * 1024):
                 total += len(chunk)
@@ -59,33 +115,115 @@ async def upload(file: Annotated[UploadFile, File()]):
                 target.write(chunk)
         if total == 0:
             raise HTTPException(400, "Файл пустой. Выберите видео и попробуйте снова.")
-        meeting_value = store.create(filename)
-        executor.submit(_process_meeting, meeting_value["id"], temp_path)
+        meeting_value = store.create(filename, phase="transcription")
+        executor.submit(_process_and_release, meeting_value["id"], temp_path)
+        submitted = True
         return meeting_value
-    except Exception:
-        temp_path.unlink(missing_ok=True)
+    except HTTPException:
         raise
+    except Exception as exc:
+        message = "Не удалось сохранить или запустить видео. Проверьте свободное место и повторите загрузку."
+        log.error("Upload failed (%s)", type(exc).__name__)
+        if meeting_value is not None:
+            store.update(meeting_value["id"], status="error", error=message)
+        raise HTTPException(500, message) from exc
     finally:
-        await file.close()
+        try:
+            await file.close()
+        finally:
+            if acquired and not submitted:
+                if temp_path is not None:
+                    _remove_upload(temp_path)
+                processing_lock.release()
+
+
+@app.post("/api/meetings/cloud")
+async def upload_from_cloud(payload: dict):
+    public_url = payload.get("url") if isinstance(payload, dict) else None
+    if not isinstance(public_url, str):
+        raise HTTPException(400, "Вставьте публичную ссылку на видео Google Drive.")
+    try:
+        normalized, _file_id = normalize_google_drive_url(public_url)
+    except CloudImportError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    existing = store.find_by_source_url(normalized)
+    if existing:
+        existing["duplicate"] = True
+        return existing
+    if not processing_lock.acquire(blocking=False):
+        raise HTTPException(409, "Уже обрабатывается одна встреча. Дождитесь завершения и повторите импорт.")
+    try:
+        try:
+            record = store.create("Видео из Google Drive", source="cloud",
+                                  source_url=normalized, phase="downloading")
+        except Exception:
+            existing = store.find_by_source_url(normalized)
+            if existing:
+                existing["duplicate"] = True
+                processing_lock.release()
+                return existing
+            raise
+        try:
+            executor.submit(_import_cloud_and_release, record["id"], normalized)
+        except Exception:
+            store.update(record["id"], status="error", phase="error",
+                         error="Не удалось запустить импорт. Повторите попытку позже.")
+            raise
+        return store.get(record["id"]) or record
+    except HTTPException:
+        processing_lock.release()
+        raise
+    except Exception as exc:
+        processing_lock.release()
+        log.error("Cloud import submission failed (%s)", type(exc).__name__)
+        raise HTTPException(500, "Не удалось начать импорт облачного файла.") from exc
+
+
+def _import_cloud_and_release(meeting_id: str, public_url: str):
+    temp_path = None
+    try:
+        try:
+            temp_path, filename, _canonical_url = download_google_drive_video(
+                public_url, settings.data_dir / "uploads", settings.max_upload_mb * 1024 * 1024
+            )
+            store.update(meeting_id, filename=filename, phase="transcription")
+            _process_meeting(meeting_id, temp_path)
+        except Exception as exc:  # noqa: BLE001 — persist import failures without retrying AI work
+            message = str(exc) if isinstance(exc, (CloudImportError, ValueError, RuntimeError)) else ""
+            message = message or "Не удалось получить видео из облака. Скачайте его и загрузите вручную."
+            log.error("Cloud import failed (%s)", type(exc).__name__)
+            store.update(meeting_id, status="error", phase="error", error=message[:1200])
+    finally:
+        if temp_path is not None:
+            _remove_upload(temp_path)
+        processing_lock.release()
+
+
+def _process_and_release(meeting_id: str, path: Path):
+    try:
+        _process_meeting(meeting_id, path)
+    finally:
+        processing_lock.release()
 
 
 def _process_meeting(meeting_id: str, path: Path):
     try:
         transcript, language, summary = process_video(
             path, on_transcript=lambda text, lang: store.update(
-                meeting_id, transcript=text, language=lang
+                meeting_id, transcript=text, language=lang, phase="ai"
             )
         )
         store.update(meeting_id, status="ready", transcript=transcript,
-                     language=language, summary=summary)
-    except Exception as exc:
-        message = str(exc).strip() or "Обработка не удалась. Проверьте файл и настройки и загрузите его повторно."
-        log.exception("Meeting processing failed for %s", meeting_id)
-        store.update(meeting_id, status="error", error=message[:1200])
+                     language=language, summary=summary, phase="ready")
+    except Exception as exc:  # noqa: BLE001 — background task must persist any failure state
+        message = str(exc).strip() if isinstance(exc, (ValueError, RuntimeError)) else ""
+        message = message or PROCESSING_ERROR
+        log.error("Meeting processing failed (%s)", type(exc).__name__)
+        store.update(meeting_id, status="error", error=message[:1200], phase="error")
     finally:
-        path.unlink(missing_ok=True)
+        _remove_upload(path)
 
 
 def run():
     import uvicorn
-    uvicorn.run(app, host=settings.host, port=settings.port, log_level="info")
+    uvicorn.run(app, host=settings.host, port=settings.port, log_level="info", access_log=False)

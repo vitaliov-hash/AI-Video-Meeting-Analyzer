@@ -1,47 +1,42 @@
 # PROJECT_CONTEXT
 
-## Назначение и путь
+## Проект и этап
 
-Локальный AI-анализатор видео встреч, DZ Light. Канонический проект: `D:\AI Projects\AI-Video-Meeting-Analyzer`.
+Путь: `D:\AI Projects\AI-Video-Meeting-Analyzer`. DZ Light проверен на реальных RU/EN записях. DZ Pro добавляет импорт одной публичной записи из Google Drive, не OAuth или мониторинг папки.
 
-## Текущее состояние
+Проверенный Lite commit: `e56ba54`; на нём создан локальный annotated tag `dz-lite-v1`. Работа Pro завершена в `feature/dz-pro` и зафиксирована локальным commit после Quality Gate; рабочее дерево чистое.
 
-DZ Light частично реализован: локальная одностраничная загрузка, очередь, FFmpeg извлечение, Faster-Whisper STT, провайдеры summary, SQLite история, статусы и понятные ошибки. Не финальная приёмка: нет real-provider summary/grounding проверки, потому что API ключ отсутствует и платный вызов запрещён без отдельного согласования.
+## Архитектура приложения
 
-До начала работ каталог проекта существовал пустым и без Git. Исходники тестовых записей найдены вне проекта в фактическом каталоге `D:\AI Projects\_DemoMediaAI-Video-Meeting-Analyzer` (имя отличается от пути в запросе): RU и EN. Исходники оставлять вне Git.
+- FastAPI + одностраничный HTML/CSS/JS интерфейс.
+- FFmpeg audio extraction и Faster-Whisper `small` CPU int8; DeepSeek по умолчанию, OpenAI/Gemini configurable.
+- Ручная загрузка и Google Drive import передают файл в одну `process_video()` функцию.
+- Google Drive adapter проверяет HTTPS/host, DNS IP, redirect hosts, размер, timeout, HTML и MP4/WebM signature; OAuth отсутствует.
+- SQLite сохраняет источник, нормализованную ссылку, фазу и результат. Уникальный индекс защищает от повторного анализа.
+- `PUBLIC_API_BASE_URL` позволяет статическому Vercel frontend вызывать отдельный Python backend. CORS включается только по `CORS_ALLOWED_ORIGINS`.
+- Docker backend хранит DB и кэш Whisper на постоянном `/data`. Это single-instance конфигурация; in-process worker не переживает рестарт.
 
-Файлы: `Banking_Committee_Hearing_-_Illegal_Foreclosures.webm` — 00:04:02; `Интервью_с_Дмитрием_Емцом.webm` — 00:04:46; дополнительное интервью Nival — 00:06:26. Длительности считаны из Windows Shell metadata.
+## Проверенные результаты Lite и Pro
 
-Официальные Google Docs DZ Light и DZ Pro прочитаны через Google Drive. DZ Light требует ручную загрузку WebM/MP4, фактическую транскрибацию и summary, одну страницу, SQLite/диск persistence, статусы и понятные ошибки. DZ Pro/PRO+ исключены.
+- Реальная Lite транскрибация: RU 4:46 — 4 508 символов (`ru`, p=.99); EN 4:02 — 3 325 символов (`en`, p=.99). Реальные Lite summaries сохранены в локальной базе.
+- **Live Cloud E2E 2026-11-06:** публичный Google Drive WebM (11,484,674 bytes; EBML signature valid) реально скачан, аудио извлечено, Faster-Whisper `small` обработал 4:02 и определил `en` (p=.99; 3,325 transcript characters). Реально выполнен один DeepSeek запрос: HTTP 200, usage 1,106 prompt + 282 completion = 1,388 tokens. Summary, source и transcript сохранены в SQLite; page/list/detail reload и повторная ссылка подтвердили persistence и dedup без нового AI вызова. Полный сценарий занял 632.19 s.
+- Manual summary audit использовал сохранённую транскрипцию и официальный источник, без нового DeepSeek запроса. Большая часть содержания подтверждена. Найдены: ASR ошибся в фамилии `Stipano` (`Stepano` в транскрипции/summary); исходная устная арифметика не сходится (14 requests против 1+3+9=13); элемент `decisions` фактически описывает отсутствие решения; один open question является выводом, а не прямым вопросом. Результат встречи в БД не редактировался. Подробности и доказательства — в `ACCEPTANCE.md`.
+- Prompt уточнён для будущих анализов и добавлен regression test: не заносить нерешённость в decisions, не выводить вопросы из критики, не исправлять имена извне, отмечать внутренние числовые противоречия. Реальный анализ после этой правки **не запускался**.
+- Safe logging: HTTPX/HTTPCore logger families (`httpx`, `httpcore`, `httpx2`, `httpcore2`) и Uvicorn access logger подавлены; app logs не содержат IP, URL или meeting ID. Добавлены privacy tests для URL/credentials/ID/IP. Системные журналы не очищались.
+- Final Quality Gate: **28 pytest passed**; Ruff, compileall, JavaScript syntax, frontend build, security scan (repository + Pro ZIP) и `git diff --check` проходят. Тесты используют mocks; платных API-вызовов в Quality Gate нет.
+- Полный cloud E2E с реальными Faster-Whisper и одним согласованным DeepSeek вызовом завершён; дальнейшие платные вызовы не разрешены этим прогоном.
 
-## Архитектурные решения
+## Git, релизы и публикация
 
-- Python/FastAPI + HTML/CSS/JS; локальный интерфейс.
-- Faster-Whisper multilingual `small`, CPU int8 и FFmpeg для извлечения аудио.
-- Summarizer provider interface; DeepSeek default, OpenAI/Gemini configurability. Настройки моделей актуализированы по официальным API reference (DeepSeek `deepseek-flash`, OpenAI `gpt-5-mini`, Gemini `gemini-3.8-flash`).
-- Локальная SQLite, временные видео удаляются после обработки.
-- Нет фиктивного AI результата и никаких реальных API-вызовов без ключа.
-- Model cache направлен в `.cache/huggingface` под проектом, чтобы не занять системный диск C.
-- Compatibility fallback обходит PyAV `metadata_errors` несовместимость.
+- Тег `dz-lite-v1` указывает на подтверждённый checkpoint `e56ba54`.
+- Текущая ветка `feature/dz-pro`; локальный DZ Pro commit создан после прохождения Quality Gate. Git remote отсутствует; Push/PR/Merge не выполнялись.
+- GitHub workflow подготовлен локально; GitHub URL, Actions run и branch protection ещё не подтверждены.
+- Vercel config и Docker backend build подготовлены локально. Docker daemon недоступен, поэтому `docker build` не проверен. Hosting projects/deployments не создавались.
+- Перед публикацией требуется серверная аутентификация/rate limit и ограничение расходов: текущий API не защищён от произвольных вызовов. Права на учебные видео тоже не подтверждены.
 
-## Тесты и проверки
+## Безопасность и дальнейшая работа
 
-- Ruff: PASS; pytest: **11 passed**; compileall: PASS; JS syntax: PASS.
-- HTTP runtime smoke: PASS (страница/API 200).
-- STT small CPU int8: RU 4:46 → 4 508 chars, `ru` p=.99; EN 4:02 → 3 325 chars, `en` p=.99. QA SQLite пережила повторное открытие; тестовые базы удалены.
-- AI response structure/eval mocks: PASS. Реальная summary и экспертная проверка grounding: BLOCKED до разрешённого обращения к AI API.
-- Secrets scan: PASS. Подробнее в `ACCEPTANCE.md`.
-
-## Git/GitHub/Deploy
-
-Локальный репозиторий и ветка `feature/dz-light`; root commit `adf0246` создан после Local Quality Gate. Remote/GitHub не настроены, push/PR не выполнялись. Никакой публикации/deploy.
-
-## Известные ограничения/блокеры
-
-- Реальная генерация конспекта требует API ключа и платного внешнего вызова; без отдельного согласования не запускать.
-- Визуальная проверка в браузере недоступна, так как UI browser provider не подключён; HTTP smoke пройден.
-- Точность полной транскрипции требует человекочитаемой сверки; короткий RU фрагмент имел ошибку в распознавании имени.
-
-## Следующие действия
-
-Завершить реализацию UI/backend, проверить unit/runtime, выполнить локальную транскрибацию RU и EN если модель доступна, подключить summarizer без платного вызова, проверить AI evals моками, секреты и Git diff. При необходимости запросить ключ/разрешение только перед реальным платным тестом.
+- Не сохранять пользовательские share URLs, API keys, видео, model cache или локальную базу в Git/ZIP.
+- Локальный `.env` существует; его значения не читать и не выводить.
+- Следующий GitHub шаг: после отдельного согласования создать private repository в аккаунте пользователя, подключить remote, push ветки и открыть PR; merge запрещён до CI/review и отдельного согласования.
+- Публичный deployment остаётся заблокирован до server-side auth, rate limiting, ограничений расходов, TLS, persistent storage/backups, выбора host и явного согласования.
