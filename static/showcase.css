@@ -1,5 +1,6 @@
 .showcase-only{display:none}
 .teacher-preview-only{display:none}
+html:not([data-app-mode="teacher-preview"]) .teacher-preview-only{display:none!important}
 html[data-app-mode="showcase"] .live-only{display:none!important}
 html[data-app-mode="showcase"] .showcase-only{display:block}
 html[data-app-mode="showcase"] .eyebrow.showcase-only{display:block}
@@ -36,3 +37,11 @@ html[data-app-mode="showcase"] .summary-grid{grid-template-columns:repeat(2,minm
 @media(max-width:760px){html[data-app-mode="showcase"] .layout{grid-template-columns:minmax(0,1fr)}html[data-app-mode="showcase"] .summary-grid{grid-template-columns:minmax(0,1fr)}.history,.details,.meeting-list,.meeting{min-width:0}.detail-head{flex-direction:column}html[data-app-mode="showcase"] header p{max-width:100%;overflow-wrap:anywhere}}
 @media(max-width:430px){.showcase-notice{padding:14px}.summary-tab{flex:1 1 100%;text-align:left}}
 @media(max-width:500px){.teacher-login{grid-template-columns:1fr}.teacher-login strong,.teacher-login label,.teacher-login p{grid-column:auto}.teacher-session{align-items:flex-start;flex-direction:column}}
+/* Portfolio language controls share the same layout in static and local modes. */
+.locale-switch { display:flex; justify-content:flex-end; align-items:center; gap:.65rem; margin-bottom:1rem; }
+.locale-switch select,.summary-language select { border:1px solid #cad8d0; border-radius:8px; background:white; color:#173d31; padding:.55rem .7rem; font:inherit; }
+.summary-language { margin:1rem 0; padding:1rem 1.25rem; border:1px solid #d9e5dd; border-radius:12px; background:#f6faf7; }
+.summary-language label { display:block; font-weight:700; margin-bottom:.5rem; }
+.summary-language p { margin:.55rem 0 0; font-size:.88rem; line-height:1.45; }
+.meeting-languages { color:#586e68; font-size:.9rem; }
+@media (max-width:390px) { .locale-switch { flex-wrap:wrap; } .summary-language select { max-width:100%; } }

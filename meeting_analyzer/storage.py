@@ -18,10 +18,11 @@ class MeetingStore:
                 id TEXT PRIMARY KEY, filename TEXT NOT NULL, added_at TEXT NOT NULL,
                 status TEXT NOT NULL, language TEXT, transcript TEXT,
                 summary TEXT, error TEXT, source TEXT NOT NULL DEFAULT 'manual',
-                source_url TEXT, phase TEXT)""")
+                source_url TEXT, phase TEXT, summary_language TEXT)""")
             columns = {row[1] for row in db.execute("PRAGMA table_info(meetings)")}
             for name, declaration in (("source", "TEXT NOT NULL DEFAULT 'manual'"),
-                                      ("source_url", "TEXT"), ("phase", "TEXT")):
+                                      ("source_url", "TEXT"), ("phase", "TEXT"),
+                                      ("summary_language", "TEXT")):
                 if name not in columns:
                     db.execute(f"ALTER TABLE meetings ADD COLUMN {name} {declaration}")
             db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_meetings_source_url "
@@ -51,15 +52,16 @@ class MeetingStore:
             return result.rowcount
 
     def create(self, filename: str, *, source: str = "manual", source_url: str | None = None,
-               phase: str | None = None) -> dict[str, Any]:
+               phase: str | None = None, summary_language: str | None = None) -> dict[str, Any]:
         meeting = {"id": uuid4().hex, "filename": filename,
                    "added_at": datetime.now(UTC).isoformat(), "status": "processing",
                    "language": None, "transcript": None, "summary": None, "error": None,
-                   "source": source, "source_url": source_url, "phase": phase}
+                   "source": source, "source_url": source_url, "phase": phase,
+                   "summary_language": summary_language}
         with self._lock, self._connect() as db:
-            db.execute("INSERT INTO meetings (id,filename,added_at,status,source,source_url,phase) "
-                       "VALUES (?,?,?,?,?,?,?)", (meeting["id"], filename, meeting["added_at"],
-                       meeting["status"], source, source_url, phase))
+            db.execute("INSERT INTO meetings (id,filename,added_at,status,source,source_url,phase,summary_language) "
+                       "VALUES (?,?,?,?,?,?,?,?)", (meeting["id"], filename, meeting["added_at"],
+                       meeting["status"], source, source_url, phase, summary_language))
         return meeting
 
     def find_by_source_url(self, source_url: str) -> dict[str, Any] | None:
@@ -68,7 +70,7 @@ class MeetingStore:
         return self._decode(row) if row else None
 
     def update(self, meeting_id: str, **values: Any) -> None:
-        allowed = {"filename", "status", "language", "transcript", "summary", "error", "phase"}
+        allowed = {"filename", "status", "language", "transcript", "summary", "error", "phase", "summary_language"}
         if not values or values.keys() - allowed:
             raise ValueError("Invalid meeting fields")
         assignments = ",".join(f"{key}=?" for key in values)

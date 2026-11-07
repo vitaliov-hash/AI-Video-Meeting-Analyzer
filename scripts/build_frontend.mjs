@@ -46,7 +46,7 @@ if (vercelBuild && !showcase && !teacherPreview) {
 rmSync(output, { recursive: true, force: true });
 mkdirSync(staticOutput, { recursive: true });
 cpSync(resolve(source, 'index.html'), resolve(output, 'index.html'));
-for (const name of ['app.js', 'showcase.js', 'styles.css', 'showcase.css']) {
+for (const name of ['i18n.js', 'app.js', 'showcase.js', 'styles.css', 'showcase.css']) {
   cpSync(resolve(source, name), resolve(staticOutput, name));
 }
 if (showcase) {

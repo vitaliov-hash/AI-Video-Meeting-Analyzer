@@ -9,9 +9,9 @@ def test_single_page_history_and_upload_validation(tmp_path, monkeypatch):
     client = TestClient(app_module.app)
     page = client.get("/")
     assert page.status_code == 200
-    assert "Анализатор встреч" in page.text
+    assert 'data-i18n="appTitle"' in page.text
     assert 'id="cloud-form"' in page.text
-    assert "Добавить из облака" in page.text
+    assert 'data-i18n="addFromCloud"' in page.text
     assert client.get("/api/meetings").json() == []
     response = client.post("/api/meetings", files={"file": ("notes.txt", b"not a video", "text/plain")})
     assert response.status_code == 400
@@ -73,10 +73,13 @@ def test_cloud_link_uses_shared_pipeline_and_deduplicates(tmp_path, monkeypatch)
     assert first.status_code == 200
     assert first.json()["source"] == "cloud"
     assert first.json()["status"] == "ready"
-    second = client.post("/api/meetings/cloud", json={"url": share + "?utm_source=again"})
+    second = client.post("/api/meetings/cloud", json={
+        "url": share + "?utm_source=again", "summary_language": "pt-BR",
+    })
     assert second.status_code == 200
     assert second.json()["duplicate"] is True
     assert second.json()["id"] == first.json()["id"]
+    assert second.json()["summary_language"] == "en"
     assert len(pipeline_calls) == 1
 
 
@@ -87,3 +90,36 @@ def test_cloud_link_rejects_unsupported_host(tmp_path, monkeypatch):
     )
     assert response.status_code == 400
     assert "Google Drive" in response.json()["detail"]
+
+
+def test_selected_summary_language_is_forwarded_without_changing_transcript(tmp_path, monkeypatch):
+    store = MeetingStore(tmp_path / "language.sqlite3")
+    meeting = store.create("meeting.webm", summary_language="es")
+    monkeypatch.setattr(app_module, "store", store)
+    calls = []
+
+    def process(_path, on_transcript, target_language):
+        calls.append(target_language)
+        on_transcript("Original English speech.", "en")
+        return "Original English speech.", "en", {
+            "short_summary": "Resumen", "decisions": [], "next_tasks": [], "open_questions": [],
+        }
+
+    monkeypatch.setattr(app_module, "process_video", process)
+    source = tmp_path / "upload.webm"
+    source.write_bytes(b"fixture")
+    app_module._process_meeting(meeting["id"], source)
+    saved = store.get(meeting["id"])
+    assert calls == ["es"]
+    assert saved["language"] == "en"
+    assert saved["summary_language"] == "es"
+    assert saved["transcript"] == "Original English speech."
+
+
+def test_cloud_rejects_unsupported_summary_language_without_analysis(tmp_path, monkeypatch):
+    monkeypatch.setattr(app_module, "store", MeetingStore(tmp_path / "language.sqlite3"))
+    response = TestClient(app_module.app).post(
+        "/api/meetings/cloud", json={"url": "https://example.com/video.webm", "summary_language": "de"}
+    )
+    assert response.status_code == 400
+    assert "summary language" in response.json()["detail"]

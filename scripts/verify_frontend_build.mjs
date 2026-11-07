@@ -57,7 +57,7 @@ assert.equal(existsSync(resolve(staticOutput, 'demo-data.json')), true, 'showcas
 const demoJson = readFileSync(resolve(staticOutput, 'demo-data.json'), 'utf8');
 assert.doesNotMatch(demoJson, /(https?:\/\/|drive\.google\.com|localhost|\.sqlite3|DEEPSEEK_API_KEY)/i, 'showcase data contains no private links, database paths, or keys');
 assert.deepEqual(readdirSync(output).sort(), ['index.html', 'static']);
-assert.deepEqual(readdirSync(staticOutput).sort(), ['app.js', 'demo-data.json', 'runtime-config.js', 'showcase.css', 'showcase.js', 'styles.css']);
+assert.deepEqual(readdirSync(staticOutput).sort(), ['app.js', 'demo-data.json', 'i18n.js', 'runtime-config.js', 'showcase.css', 'showcase.js', 'styles.css']);
 const showcaseCss = readFileSync(resolve(staticOutput, 'showcase.css'), 'utf8');
 assert.match(showcaseCss, /@media\(max-width:760px\).*html\[data-app-mode="showcase"\] \.summary-grid\{grid-template-columns:minmax\(0,1fr\)\}/, 'mobile Showcase overrides desktop grid specificity');
 

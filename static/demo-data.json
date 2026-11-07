@@ -45,6 +45,30 @@
         "open_questions": ["Will the review include screen-reader testing?", "What further work, if any, will be needed after Friday's review?"]
       },
       "editorial_notes": ["The draft incorrectly turned a review prototype into a production release.", "A production release date was not discussed, so it should not appear as an agreed decision or open question.", "Screen-reader testing is unassigned and remains an open question."]
+    },
+    {
+      "id": "sample-es-museum-01",
+      "filename": "Planificación de una visita al museo — ejemplo ficticio",
+      "added_at": "2026-10-22T11:00:00Z",
+      "source": "Ejemplo preparado",
+      "language": "es",
+      "status": "ready",
+      "transcript": "Coordinadora: Organizaremos una visita educativa al museo para el equipo. Propongo el jueves por la mañana.\n\nGuía: El jueves está disponible. Prepararé una ruta de cuarenta minutos y enviaré un borrador el martes.\n\nCoordinadora: De acuerdo con la ruta de cuarenta minutos. Confirmaremos el número de asistentes el miércoles. Aún no sabemos si necesitaremos audioguías.\n\nGuía: Esperaré la confirmación antes de reservarlas.",
+      "draft": {"short_summary":"El equipo planeó una visita al museo el jueves con una ruta de cuarenta minutos.","decisions":["La ruta durará cuarenta minutos.","Se reservarán audioguías para todos."],"next_tasks":["La guía enviará el borrador el martes.","La coordinadora confirmará el número de asistentes el miércoles."],"open_questions":["¿Se necesitarán audioguías?"]},
+      "reviewed": {"short_summary":"El equipo acordó una ruta de cuarenta minutos para una visita educativa. La necesidad de audioguías sigue sin resolverse.","decisions":["La ruta durará cuarenta minutos."],"next_tasks":["La guía enviará el borrador el martes.","La coordinadora confirmará el número de asistentes el miércoles."],"open_questions":["¿Se necesitarán audioguías?"]},
+      "editorial_notes":["El borrador convirtió la posibilidad de usar audioguías en una reserva confirmada.","La transcripción deja abierta esa decisión."]
+    },
+    {
+      "id": "sample-ptbr-community-01",
+      "filename": "Planejamento de oficina comunitária — exemplo fictício",
+      "added_at": "2026-10-23T13:00:00Z",
+      "source": "Exemplo preparado",
+      "language": "pt-BR",
+      "status": "ready",
+      "transcript": "Facilitadora: Vamos preparar uma oficina comunitária sobre organização de arquivos digitais. Proponho duas atividades práticas.\n\nDesigner: Posso preparar os cartões de instrução até quarta-feira.\n\nFacilitadora: Combinado. A oficina terá duas atividades práticas. Ainda precisamos escolher o local.\n\nDesigner: Vou enviar os cartões na quarta. A escolha do local fica para a próxima conversa.",
+      "draft": {"short_summary":"A equipe planejou uma oficina comunitária com duas atividades práticas.","decisions":["A oficina terá duas atividades práticas.","A oficina será na biblioteca central."],"next_tasks":["O designer enviará os cartões de instrução na quarta-feira."],"open_questions":["Qual será o local da oficina?"]},
+      "reviewed": {"short_summary":"A equipe planejou uma oficina comunitária sobre arquivos digitais com duas atividades práticas. O local ainda não foi definido.","decisions":["A oficina terá duas atividades práticas."],"next_tasks":["O designer enviará os cartões de instrução na quarta-feira."],"open_questions":["Qual será o local da oficina?"]},
+      "editorial_notes":["A versão inicial inventou um local que não consta na transcrição.","A escolha do local ficou para a próxima conversa."]
     }
   ]
 }

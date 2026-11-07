@@ -1,43 +1,14 @@
 <!doctype html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>AI-анализатор встреч</title><script src="/static/runtime-config.js"></script><link rel="stylesheet" href="/static/styles.css"><link rel="stylesheet" href="/static/showcase.css">
-</head>
-<body>
-  <main class="shell">
-    <header><div class="eyebrow live-only">ЛОКАЛЬНЫЙ AI-ИНСТРУМЕНТ</div><div class="eyebrow showcase-only">ДЕМОНСТРАЦИОННЫЙ РЕЖИМ</div><div class="eyebrow teacher-preview-only">ЗАКРЫТАЯ ДЕМОСТРАЦИЯ ДЛЯ ПРЕПОДАВАТЕЛЯ</div><h1>Анализатор встреч</h1><p class="live-only">Загрузите запись: видео и распознавание обрабатываются на компьютере, транскрипт отправляется выбранному AI-провайдеру для конспекта.</p><p class="showcase-only">Готовые примеры на русском и английском языках</p><p class="teacher-preview-only">Живая обработка доступна только после входа и в течение ограниченного срока.</p></header>
-    <section id="showcase-notice" class="showcase-notice showcase-only" aria-label="О демонстрационных данных">
-      <strong>Статическая демонстрация — живой анализ отключён</strong>
-      <p>Примеры полностью вымышлены и подготовлены заранее. Этот сайт не загружает записи и не обращается к сервисам распознавания или AI.</p>
-    </section>
-    <form id="teacher-login" class="teacher-preview-only teacher-login" aria-label="Вход преподавателя">
-      <strong>Вход преподавателя</strong><label for="teacher-password">Пароль доступа</label>
-      <input id="teacher-password" type="password" autocomplete="current-password" minlength="1" maxlength="256" required>
-      <button id="teacher-login-submit" class="button" type="submit">Войти</button>
-      <p id="teacher-login-error" role="alert" hidden></p>
-    </form>
-    <section id="teacher-session" class="teacher-preview-only teacher-session" hidden>
-      <span id="teacher-session-status">Сессия ограничена по времени и числу анализов.</span>
-      <button id="teacher-logout" type="button">Выйти</button>
-    </section>
-    <section class="upload live-only teacher-protected" aria-label="Загрузка записи">
-      <div class="upload-icon">↑</div><div><strong>Добавить запись</strong><p>MP4 или WebM · обработка начнётся сразу</p></div>
-      <label class="button" for="video-file">Выбрать видео</label><input id="video-file" type="file" accept="video/mp4,video/webm,.mp4,.webm" hidden>
-    </section>
-    <form id="cloud-form" class="upload cloud-upload live-only teacher-protected" aria-label="Импорт из облака">
-      <div class="upload-icon">↗</div><div class="cloud-fields"><strong>Добавить из Google Drive</strong><p>Вставьте публичную ссылку на файл MP4 или WebM</p><input id="cloud-url" type="url" inputmode="url" autocomplete="url" placeholder="https://drive.google.com/file/d/…/view" required></div>
-      <button id="cloud-submit" class="button" type="submit">Добавить из облака</button>
-    </form>
-    <div id="notice" class="notice teacher-protected" role="status" hidden></div>
-    <div class="layout teacher-protected">
-      <section class="history"><div class="section-heading"><h2>Встречи</h2><span id="meeting-count">0</span></div><div id="meeting-list" class="meeting-list"></div></section>
-      <section id="details" class="details"><div class="empty"><div class="empty-mark">◌</div><h2>Выберите встречу</h2><p>Готовые записи и их конспекты появятся здесь.</p></div></section>
-    </div>
-    <footer class="live-only teacher-protected">Видеофайл удаляется после обработки. В обычном режиме расшифровка и конспект хранятся локально; транскрипт передаётся настроенному AI-провайдеру.</footer>
-    <footer class="teacher-preview-only teacher-protected">Доступ ограничен: максимум два анализа за весь период. Временные видео и результаты хранятся в отдельном локальном demo-хранилище.</footer>
-    <footer class="showcase-only">В примерах нет пользовательских записей, реальных транскрипций или личных ссылок. Перезагрузка страницы не удаляет демонстрационные материалы.</footer>
-  </main>
-  <script src="/static/app.js" defer></script>
-  <script src="/static/showcase.js" defer></script>
-</body></html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Video Meeting Analyzer</title><script src="/static/runtime-config.js"></script><link rel="stylesheet" href="/static/styles.css"><link rel="stylesheet" href="/static/showcase.css"></head>
+<body><main class="shell">
+<div class="locale-switch"><label for="ui-language" data-i18n="interfaceLanguage"></label><select id="ui-language"><option value="en">EN</option><option value="ru">RU</option><option value="es">ES</option><option value="pt-BR">PT-BR</option></select></div>
+<header><div class="eyebrow live-only" data-i18n="liveEyebrow"></div><div class="eyebrow showcase-only" data-i18n="showcaseEyebrow"></div><div class="eyebrow teacher-preview-only" data-i18n="teacherEyebrow"></div><h1 data-i18n="appTitle"></h1><p class="live-only" data-i18n="liveIntro"></p><p class="showcase-only" data-i18n="showcaseIntro"></p><p class="teacher-preview-only" data-i18n="teacherIntro"></p></header>
+<section id="showcase-notice" class="showcase-notice showcase-only"><strong data-i18n="staticNoticeTitle"></strong><p data-i18n="staticNoticeBody"></p></section>
+<form id="teacher-login" class="teacher-preview-only teacher-login"><strong data-i18n="teacherLogin"></strong><label for="teacher-password" data-i18n="password"></label><input id="teacher-password" type="password" autocomplete="current-password" minlength="1" maxlength="256" required><button id="teacher-login-submit" class="button" type="submit" data-i18n="signIn"></button><p id="teacher-login-error" role="alert" hidden></p></form>
+<section id="teacher-session" class="teacher-preview-only teacher-session" hidden><span id="teacher-session-status" data-i18n="sessionLimited"></span><button id="teacher-logout" type="button" data-i18n="signOut"></button></section>
+<section class="upload live-only teacher-protected"><div class="upload-icon">↑</div><div><strong data-i18n="addRecording"></strong><p data-i18n="uploadHint"></p></div><label class="button" for="video-file" data-i18n="chooseVideo"></label><input id="video-file" type="file" accept="video/mp4,video/webm,.mp4,.webm" hidden></section>
+<form id="cloud-form" class="upload cloud-upload live-only teacher-protected"><div class="upload-icon">↗</div><div class="cloud-fields"><strong data-i18n="addDrive"></strong><p data-i18n="driveHint"></p><input id="cloud-url" type="url" inputmode="url" autocomplete="url" placeholder="https://drive.google.com/file/d/…/view" required></div><button id="cloud-submit" class="button" type="submit" data-i18n="addFromCloud"></button></form>
+<section class="summary-language live-only teacher-protected"><label for="summary-language" data-i18n="summaryLanguage"></label><select id="summary-language"><option value="" data-i18n="originalLanguage"></option><option value="en">English</option><option value="ru">Русский</option><option value="es">Español</option><option value="pt-BR">Português (Brasil)</option></select><p data-i18n="summaryLanguageWarning"></p></section>
+<div id="notice" class="notice teacher-protected" role="status" hidden></div><div class="layout teacher-protected"><section class="history"><div class="section-heading"><h2 data-i18n="meetings"></h2><span id="meeting-count">0</span></div><div id="meeting-list" class="meeting-list"></div></section><section id="details" class="details"><div class="empty"><h2 data-i18n="selectMeeting"></h2><p data-i18n="emptyDetails"></p></div></section></div>
+<footer class="live-only teacher-protected" data-i18n="liveFooter"></footer><footer class="teacher-preview-only teacher-protected" data-i18n="teacherFooter"></footer><footer class="showcase-only" data-i18n="showcaseFooter"></footer>
+</main><script src="/static/i18n.js" defer></script><script src="/static/app.js" defer></script><script src="/static/showcase.js" defer></script></body></html>
