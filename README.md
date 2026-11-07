@@ -38,6 +38,13 @@ python -m compileall -q meeting_analyzer tests
 
 Критерии и тест-план описаны в `ACCEPTANCE.md`. Cloud API и pipeline в тестах мокируются; тесты не расходуют квоту AI.
 
+## Ссылки для сдачи DZ Pro
+
+- [Работающий Vercel Showcase](https://ai-video-meeting-analyzer.vercel.app) — бесплатная статическая демонстрация с вымышленными RU/EN примерами, без загрузки видео и вызовов AI.
+- [Публичный исходный код GitHub](https://github.com/vitaliov-hash/AI-Video-Meeting-Analyzer).
+- [Источник видео для реального облачного теста](https://commons.wikimedia.org/wiki/File:Banking_Committee_Hearing_-_Illegal_Foreclosures.webm) — Wikimedia Commons, Public Domain в США / PD-USGov. Скачанный из Google Drive файл побайтово сверен с оригиналом по SHA-1; см. `MEDIA_LICENSE_NOTES.md`.
+- Отдельная запись настоящего Cloud E2E и инструкция преподавателю передаются в папке `dist/DZ-Pro-Final-Submission`. В Git не включаются видео, личная Drive-ссылка, ключи и локальная база.
+
 ## Vercel Showcase — Stage 4
 
 Showcase собирается как полностью статический сайт из той же кодовой базы. Локально выполните `node scripts/build_frontend.mjs --showcase`, затем откройте `frontend-dist` через любой статический HTTP-сервер. Сборка содержит только HTML/CSS/JavaScript и вымышленные RU/EN демонстрационные данные из `static/demo-data.json`. Она исключает локальную SQLite, реальные записи, транскрипты и backend.
@@ -46,7 +53,7 @@ Showcase собирается как полностью статический �
 
 `vercel.json` запускает guarded Vercel build. По умолчанию он создаёт статический Showcase и отвергает API URL. Teacher Preview выбирается только при `VERCEL_ENV=preview` и `TEACHER_PREVIEW_BUILD=1`; production Vercel всегда остаётся Showcase. Для локальной проверки фронтенда Teacher Preview используйте `PUBLIC_API_BASE_URL=https://example.invalid node scripts/build_frontend.mjs --teacher-preview`. Это только сборка, она не запускает backend и не делает сетевых запросов.
 
-Проверки: `node scripts/test_showcase_mode.mjs` и `node scripts/verify_frontend_build.mjs`. Для бесплатной Vercel-публикации используйте только Hobby план; проект не должен просить карту или переход на платный тариф. На `main` GitHub Vercel status сейчас success, но точный frontend URL нужно подтвердить и внести в `TEACHER_HANDOUT.md`.
+Проверки: `node scripts/test_showcase_mode.mjs` и `node scripts/verify_frontend_build.mjs`. Для бесплатной Vercel-публикации используйте только Hobby план; проект не должен просить карту или переход на платный тариф. Публичный Showcase доступен по ссылке выше.
 
 Скриншоты локальной синтетической сборки: [RU](docs/showcase/ru-desktop.png), [EN](docs/showcase/en-reviewed-desktop.png), [мобильная ширина 390 px](docs/showcase/mobile-390.png). Это не доказательство Cloud E2E.
 
