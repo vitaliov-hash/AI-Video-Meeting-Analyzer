@@ -19,18 +19,24 @@ class ConfiguredSummaryProvider(SummaryProvider):
     def __init__(self, provider: str):
         self.provider = provider
 
-    def summarize(self, transcript: str, language: str) -> dict[str, Any]:
+    def summarize(self, transcript: str, language: str, target_language: str | None = None) -> dict[str, Any]:
+        if target_language and target_language not in {"en", "ru", "es", "pt-BR"}:
+            raise ValueError("Unsupported summary language")
+        output_language = target_language or ("pt-BR" if language.lower().startswith("pt") else language)
         if (settings.teacher_demo_enabled
                 and len(transcript) > settings.teacher_demo_max_transcript_chars):
             raise ValueError("Транскрипт превышает ограничение Teacher Demo; AI-запрос не отправлен.")
         system_prompt = (Path(__file__).resolve().parents[2] / "prompts" / "meeting_summary.md").read_text(encoding="utf-8")
-        prompt = f"Язык распознавания: {language}\n\nТранскрипт:\n{transcript}"
+        prompt = (f"Язык распознавания: {language}\n"
+                  f"Язык конспекта: {output_language}\n\nТранскрипт:\n{transcript}")
         if (settings.teacher_demo_enabled
                 and len((system_prompt + prompt).encode("utf-8")) > MAX_PROMPT_UTF8_BYTES):
             raise ValueError("Промпт превышает жёсткий лимит Teacher Demo; AI-запрос не отправлен.")
         raw = self._request(prompt, system_prompt)
         summary = validate_summary(raw)
-        empty_phrase = "В записи это не прозвучало." if language.lower().startswith("ru") else "Not stated in the recording."
+        empty_phrase = {"ru": "В записи это не прозвучало.", "es": "No se menciona en la grabación.",
+                        "pt-BR": "Não foi mencionado na gravação.",
+                        "en": "Not stated in the recording."}.get(output_language, "Not stated in the recording.")
         for key in ("decisions", "next_tasks", "open_questions"):
             summary[key] = [item.strip() for item in summary[key] if item.strip()] or [empty_phrase]
         return summary

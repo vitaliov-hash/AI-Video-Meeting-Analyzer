@@ -62,3 +62,31 @@ def test_missing_provider_key_fails_without_request(monkeypatch):
     provider = ConfiguredSummaryProvider("deepseek")
     with pytest.raises(RuntimeError, match="DEEPSEEK_API_KEY"):
         provider._request("prompt", "system")
+
+
+@pytest.mark.parametrize("target,empty", [
+    ("en", "Not stated in the recording."),
+    ("ru", "В записи это не прозвучало."),
+    ("es", "No se menciona en la grabación."),
+    ("pt-BR", "Não foi mencionado na gravação."),
+])
+def test_explicit_summary_language_preserves_transcript_and_marks_empty(monkeypatch, target, empty):
+    provider = ConfiguredSummaryProvider("deepseek")
+    captured = {}
+
+    def fake_request(prompt, system_prompt):
+        captured["prompt"] = prompt
+        return '{"short_summary":"Example","decisions":[],"next_tasks":[],"open_questions":[]}'
+
+    monkeypatch.setattr(provider, "_request", fake_request)
+    result = provider.summarize("Original speech stays intact.", "en", target)
+    assert "Original speech stays intact." in captured["prompt"]
+    assert f"Язык конспекта: {target}" in captured["prompt"]
+    assert result["decisions"] == [empty]
+
+
+def test_rejects_unsupported_summary_language_before_provider_request(monkeypatch):
+    provider = ConfiguredSummaryProvider("deepseek")
+    monkeypatch.setattr(provider, "_request", lambda *_: pytest.fail("unexpected request"))
+    with pytest.raises(ValueError, match="Unsupported summary language"):
+        provider.summarize("Speech", "en", "de")

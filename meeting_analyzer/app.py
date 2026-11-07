@@ -7,7 +7,7 @@ from threading import Lock
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -39,6 +39,7 @@ teacher_guard = TeacherDemoGuard(settings)
 executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="meeting-analysis")
 processing_lock = Lock()
 ALLOWED = {".mp4", ".webm"}
+SUMMARY_LANGUAGES = {"en", "ru", "es", "pt-BR"}
 PROCESSING_ERROR = "Обработка не удалась. Проверьте файл и настройки и загрузите его повторно."
 
 
@@ -168,12 +169,15 @@ def meeting(meeting_id: str):
 
 
 @app.post("/api/meetings")
-async def upload(file: Annotated[UploadFile, File()]):
+async def upload(file: Annotated[UploadFile, File()],
+                 summary_language: Annotated[str | None, Form()] = None):
     acquired = False
     submitted = False
     temp_path = None
     meeting_value = None
     try:
+        if summary_language and summary_language not in SUMMARY_LANGUAGES:
+            raise HTTPException(400, "Unsupported summary language.")
         suffix = Path(file.filename or "").suffix.lower()
         if suffix not in ALLOWED:
             raise HTTPException(400, "Поддерживаются только видео MP4 и WebM.")
@@ -195,7 +199,8 @@ async def upload(file: Annotated[UploadFile, File()]):
         if total == 0:
             raise HTTPException(400, "Файл пустой. Выберите видео и попробуйте снова.")
         teacher_guard.reserve_analysis()
-        meeting_value = store.create(filename, phase="transcription")
+        meeting_value = store.create(filename, phase="transcription",
+                                     summary_language=summary_language)
         executor.submit(_process_and_release, meeting_value["id"], temp_path)
         submitted = True
         return meeting_value
@@ -219,6 +224,9 @@ async def upload(file: Annotated[UploadFile, File()]):
 
 @app.post("/api/meetings/cloud")
 async def upload_from_cloud(payload: dict):
+    summary_language = payload.get("summary_language") if isinstance(payload, dict) else None
+    if summary_language is not None and summary_language not in SUMMARY_LANGUAGES:
+        raise HTTPException(400, "Unsupported summary language.")
     public_url = payload.get("url") if isinstance(payload, dict) else None
     if not isinstance(public_url, str):
         raise HTTPException(400, "Вставьте публичную ссылку на видео Google Drive.")
@@ -236,7 +244,8 @@ async def upload_from_cloud(payload: dict):
         teacher_guard.reserve_analysis()
         try:
             record = store.create("Видео из Google Drive", source="cloud",
-                                  source_url=normalized, phase="downloading")
+                                  source_url=normalized, phase="downloading",
+                                  summary_language=summary_language)
         except Exception:
             existing = store.find_by_source_url(normalized)
             if existing:
@@ -289,13 +298,14 @@ def _process_and_release(meeting_id: str, path: Path):
 
 def _process_meeting(meeting_id: str, path: Path):
     try:
+        requested_language = store.get(meeting_id)["summary_language"]
+        kwargs = {"target_language": requested_language} if requested_language else {}
         transcript, language, summary = process_video(
             path, on_transcript=lambda text, lang: store.update(
-                meeting_id, transcript=text, language=lang, phase="ai"
-            )
-        )
+                meeting_id, transcript=text, language=lang, phase="ai"), **kwargs)
         store.update(meeting_id, status="ready", transcript=transcript,
-                     language=language, summary=summary, phase="ready")
+                     language=language, summary=summary, phase="ready",
+                     summary_language=requested_language or ("pt-BR" if language.lower().startswith("pt") else language))
     except Exception as exc:  # noqa: BLE001 — background task must persist any failure state
         message = str(exc).strip() if isinstance(exc, (ValueError, RuntimeError)) else ""
         message = message or PROCESSING_ERROR

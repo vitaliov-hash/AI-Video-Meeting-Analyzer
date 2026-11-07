@@ -5,8 +5,10 @@ import vm from 'node:vm';
 
 const root = resolve(import.meta.dirname, '..');
 const demoData = JSON.parse(readFileSync(resolve(root, 'static/demo-data.json'), 'utf8'));
+const i18nSource = readFileSync(resolve(root, 'static/i18n.js'), 'utf8');
 const appSource = readFileSync(resolve(root, 'static/app.js'), 'utf8');
 const showcaseSource = readFileSync(resolve(root, 'static/showcase.js'), 'utf8');
+const htmlSource = readFileSync(resolve(root, 'static/index.html'), 'utf8');
 
 class Element {
   constructor(id = '') { this.id = id; this._innerHTML = ''; this.cachedNodes = new Map(); this.textContent = ''; this.hidden = true; this.dataset = {}; this.listeners = {}; }
@@ -37,7 +39,7 @@ function createHarness(saved = {}, mode = 'showcase') {
   };
   const storage = new Map(Object.entries(saved));
   const requests = [];
-  const document = { documentElement: { dataset: {} }, querySelector: getElement };
+  const document = { documentElement: { dataset: {} }, querySelector: getElement, querySelectorAll: () => [] };
   const context = {
     document,
     window: { APP_CONFIG: { mode, apiBaseUrl: '' }, location: { search: '' }, setTimeout: () => 0 },
@@ -54,19 +56,48 @@ function createHarness(saved = {}, mode = 'showcase') {
     Headers,
     URLSearchParams,
   };
+  vm.runInNewContext(i18nSource, context, { filename: 'static/i18n.js' });
   vm.runInNewContext(appSource, context, { filename: 'static/app.js' });
   vm.runInNewContext(showcaseSource, context, { filename: 'static/showcase.js' });
-  return { elements, requests, storage, document };
+  return { elements, requests, storage, document, window: context.window };
 }
 
 const first = createHarness();
 await new Promise(resolve => setTimeout(resolve, 0));
+const dictionaries = first.window.I18N.dictionaries;
+const keys = Object.keys(dictionaries.en);
+for (const [,key] of htmlSource.matchAll(/data-i18n="([^"]+)"/g)) {
+  assert.ok(Object.hasOwn(dictionaries.en,key),`missing static UI translation: ${key}`);
+}
+for (const locale of ['en','ru','es','pt-BR']) {
+  assert.deepEqual(Object.keys(dictionaries[locale]), keys, `${locale} dictionary is complete`);
+  assert.ok(Object.values(dictionaries[locale]).every(value => typeof value === 'string' && value.trim()));
+}
+delete dictionaries.es.ready;
+first.window.I18N.dictionaries.es.ready = undefined;
+const fallbackPicker = first.elements.get('#ui-language');
+fallbackPicker.listeners.change({target:{value:'es'}});
+assert.equal(first.window.I18N.t('ready'),'Ready','missing translation falls back to English');
+dictionaries.es.ready = 'Listo';
 assert.deepEqual(first.requests.map(request => request.url), ['/static/demo-data.json']);
 assert.match(first.elements.get('#meeting-list').innerHTML, /sample-ru-planning-01/);
 assert.match(first.elements.get('#meeting-list').innerHTML, /sample-en-product-01/);
-assert.match(first.elements.get('#details').innerHTML, /не ответ AI/);
+assert.match(first.elements.get('#meeting-list').innerHTML, /sample-es-museum-01/);
+assert.match(first.elements.get('#meeting-list').innerHTML, /sample-ptbr-community-01/);
+assert.match(first.elements.get('#details').innerHTML, /No es una respuesta de IA/);
 assert.match(first.elements.get('#details').innerHTML, /Планирование учебного вебинара/);
 assert.equal(first.document.documentElement.dataset.appMode, 'showcase');
+assert.equal(demoData.meetings.length, 4);
+const picker = first.elements.get('#ui-language');
+picker.listeners.change({target:{value:'es'}});
+assert.deepEqual(first.requests.map(request => request.url), ['/static/demo-data.json'], 'UI switching makes no network requests');
+assert.equal(first.storage.get('meeting-analyzer-ui-language'),'es');
+assert.match(first.elements.get('#details').innerHTML,/Resumen/);
+for (const locale of ['ru','pt-BR','en']) {
+  picker.listeners.change({target:{value:locale}});
+  assert.equal(first.storage.get('meeting-analyzer-ui-language'),locale);
+}
+picker.listeners.change({target:{value:'es'}});
 
 const meetingButtons = first.elements.get('#meeting-list').querySelectorAll('.meeting');
 meetingButtons[1].listeners.click();
@@ -82,6 +113,7 @@ const reload = createHarness(Object.fromEntries(first.storage));
 await new Promise(resolve => setTimeout(resolve, 0));
 assert.match(reload.elements.get('#details').innerHTML, /Product planning session/);
 assert.match(reload.elements.get('#details').innerHTML, /no production release date was set/i);
+assert.equal(reload.document.documentElement.lang,'es');
 assert.deepEqual(reload.requests.map(request => request.url), ['/static/demo-data.json']);
 
 const live = createHarness({}, 'live');

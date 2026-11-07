@@ -2,94 +2,49 @@ if (window.APP_CONFIG?.mode === 'showcase') {
   const list = document.querySelector('#meeting-list');
   const details = document.querySelector('#details');
   const notice = document.querySelector('#notice');
+  const t = window.I18N.t;
   const storageKey = 'meeting-analyzer-showcase-selected';
   const variantKey = 'meeting-analyzer-showcase-summary-version';
   let meetings = [];
   let selectedId = null;
   let summaryVariant = localStorage.getItem(variantKey) === 'reviewed' ? 'reviewed' : 'draft';
-
   document.documentElement.dataset.appMode = 'showcase';
-
-  const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, char => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  }[char]));
-  const formatDate = value => new Intl.DateTimeFormat('ru-RU', {
-    dateStyle: 'medium', timeStyle: 'short',
-  }).format(new Date(value));
-  const titles = language => language === 'ru'
-    ? { short_summary: 'Краткое содержание', decisions: 'Решения', next_tasks: 'Задачи', open_questions: 'Открытые вопросы' }
-    : { short_summary: 'Summary', decisions: 'Decisions', next_tasks: 'Tasks', open_questions: 'Open questions' };
-
+  const esc = (value = '') => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const formatDate = value => new Intl.DateTimeFormat(window.I18N.locale,{dateStyle:'medium',timeStyle:'short'}).format(new Date(value));
   function renderList() {
     document.querySelector('#meeting-count').textContent = meetings.length;
-    list.innerHTML = meetings.map(meeting => `<button class="meeting ${meeting.id === selectedId ? 'selected' : ''}" data-id="${escapeHtml(meeting.id)}" aria-current="${meeting.id === selectedId ? 'true' : 'false'}"><span class="meeting-title">${escapeHtml(meeting.filename)}</span><span class="meeting-meta"><span>${formatDate(meeting.added_at)}</span><span class="source-label">${meeting.language === 'ru' ? 'Демо' : 'Demo'}</span><span class="status ready"><i class="dot"></i>Готово</span></span></button>`).join('');
+    list.innerHTML = meetings.length ? meetings.map(m => `<button class="meeting ${m.id===selectedId?'selected':''}" data-id="${esc(m.id)}" aria-current="${m.id===selectedId}"><span class="meeting-title">${esc(m.filename)}</span><span class="meeting-meta"><span>${formatDate(m.added_at)}</span><span class="source-label">${t('demo')}</span><span class="status ready"><i class="dot"></i>${t('ready')}</span></span></button>`).join('') : `<p class="showcase-empty">${t('demoEmpty')}</p>`;
     list.querySelectorAll('.meeting').forEach(button => button.addEventListener('click', () => selectMeeting(button.dataset.id)));
-    if (!meetings.length) list.innerHTML = '<p class="showcase-empty">Подготовленные примеры не найдены.</p>';
   }
-
-  function summaryMarkup(meeting) {
-    const summary = meeting[summaryVariant];
-    const sectionTitles = titles(meeting.language);
-    const cards = Object.entries(sectionTitles).map(([key, title]) => {
-      const value = summary[key];
-      const content = key === 'short_summary'
-        ? `<p>${escapeHtml(value)}</p>`
-        : `<ul>${value.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
-      return `<article class="summary-card"><h3>${title}</h3>${content}</article>`;
-    }).join('');
+  function summaryMarkup(m) {
+    const summary = m[summaryVariant];
+    const cards = ['short_summary','decisions','next_tasks','open_questions'].map(key => `<article class="summary-card"><h3>${t(key)}</h3>${key==='short_summary'?`<p>${esc(summary[key])}</p>`:`<ul>${summary[key].map(item=>`<li>${esc(item)}</li>`).join('')}</ul>`}</article>`).join('');
     const reviewed = summaryVariant === 'reviewed';
-    const provenance = reviewed
-      ? 'Редакторская версия, сверенная только по вымышленной демонстрационной транскрипции.'
-      : 'Первоначальный статический демонстрационный вариант. Это не ответ AI, полученный этим сайтом.';
-    const notes = reviewed ? '' : `<aside class="editorial-notes"><strong>Что исправлено в редакторской версии</strong><ul>${meeting.editorial_notes.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></aside>`;
-    return `<div class="summary-tabs" role="tablist" aria-label="Вариант конспекта"><button class="summary-tab" type="button" role="tab" data-variant="draft" aria-selected="${!reviewed}">Исходный пример</button><button class="summary-tab" type="button" role="tab" data-variant="reviewed" aria-selected="${reviewed}">Редакторская версия</button></div><p class="summary-provenance">${provenance}</p><div class="summary-grid">${cards}</div>${notes}`;
+    const notes = reviewed ? '' : `<aside class="editorial-notes"><strong>${t('editorialNotes')}</strong><ul>${m.editorial_notes.map(item=>`<li>${esc(item)}</li>`).join('')}</ul></aside>`;
+    return `<div class="summary-tabs" role="tablist" aria-label="${t('variantLabel')}"><button class="summary-tab" type="button" role="tab" data-variant="draft" aria-selected="${!reviewed}">${t('draftTab')}</button><button class="summary-tab" type="button" role="tab" data-variant="reviewed" aria-selected="${reviewed}">${t('reviewedTab')}</button></div><p class="summary-provenance">${t(reviewed?'reviewedProvenance':'draftProvenance')}</p><div class="summary-grid">${cards}</div>${notes}`;
   }
-
-  function renderDetails(meeting) {
-    const language = meeting.language === 'ru' ? 'Русский' : 'English';
-    details.innerHTML = `<div class="detail-head"><div><h2>${escapeHtml(meeting.filename)}</h2><p>${formatDate(meeting.added_at)} · ${escapeHtml(meeting.source)} · ${language}</p></div><span class="badge">Готово</span></div>${summaryMarkup(meeting)}<details class="transcript"><summary>Демонстрационная транскрипция <span class="language">${language}</span></summary><p>${escapeHtml(meeting.transcript)}</p></details>`;
-    details.querySelectorAll('.summary-tab').forEach(button => button.addEventListener('click', () => {
-      summaryVariant = button.dataset.variant;
-      localStorage.setItem(variantKey, summaryVariant);
-      renderDetails(meeting);
-    }));
+  function renderDetails(m) {
+    details.innerHTML = `<div class="detail-head"><div><h2>${esc(m.filename)}</h2><p>${formatDate(m.added_at)} · ${t('demo')} · ${esc(m.language)}</p></div><span class="badge">${t('ready')}</span></div>${summaryMarkup(m)}<details class="transcript"><summary>${t('demoTranscript')} <span class="language">${esc(m.language)}</span></summary><p>${esc(m.transcript)}</p></details>`;
+    details.querySelectorAll('.summary-tab').forEach(button => button.addEventListener('click', () => { summaryVariant=button.dataset.variant; localStorage.setItem(variantKey,summaryVariant); renderDetails(m); }));
   }
-
   function selectMeeting(id) {
-    const meeting = meetings.find(item => item.id === id);
-    if (!meeting) return;
-    selectedId = id;
-    localStorage.setItem(storageKey, id);
-    renderList();
-    renderDetails(meeting);
+    const m = meetings.find(item=>item.id===id);
+    if (!m) return;
+    selectedId=id; localStorage.setItem(storageKey,id); renderList(); renderDetails(m);
   }
-
+  window.I18N.onChange(() => { renderList(); const m=meetings.find(item=>item.id===selectedId); if(m) renderDetails(m); });
   async function initialize() {
     try {
-      const response = await fetch('/static/demo-data.json', { cache: 'no-store' });
-      if (!response.ok) throw new Error('Не удалось загрузить подготовленные примеры.');
-      const payload = await response.json();
-      if (payload.mode !== 'prepared-synthetic-showcase' || !Array.isArray(payload.meetings)) {
-        throw new Error('Файл демонстрационных данных имеет неверный формат.');
-      }
-      meetings = payload.meetings;
-      renderList();
-      const params = new URLSearchParams(window.location.search);
-      const requestedId = params.get('meeting');
-      const savedId = localStorage.getItem(storageKey);
-      const initialId = meetings.some(item => item.id === requestedId) ? requestedId : savedId;
-      const requestedVariant = params.get('summary');
-      if (requestedVariant === 'draft' || requestedVariant === 'reviewed') {
-        summaryVariant = requestedVariant;
-        localStorage.setItem(variantKey, summaryVariant);
-      }
-      selectMeeting(meetings.some(item => item.id === initialId) ? initialId : meetings[0]?.id);
-    } catch (error) {
-      notice.textContent = error.message || 'Не удалось загрузить демонстрационные примеры.';
-      notice.hidden = false;
-      list.innerHTML = '<p class="showcase-empty">История демонстраций временно недоступна.</p>';
-    }
+      const response=await fetch('/static/demo-data.json',{cache:'no-store'});
+      if(!response.ok) throw new Error(t('demoLoadFailed'));
+      const payload=await response.json();
+      if(payload.mode!=='prepared-synthetic-showcase'||!Array.isArray(payload.meetings)) throw new Error(t('demoFormatFailed'));
+      meetings=payload.meetings; renderList();
+      const params=new URLSearchParams(window.location.search);
+      const requested=params.get('meeting'); const saved=localStorage.getItem(storageKey);
+      const variant=params.get('summary'); if(['draft','reviewed'].includes(variant)){summaryVariant=variant;localStorage.setItem(variantKey,variant);}
+      selectMeeting(meetings.some(m=>m.id===requested)?requested:meetings.some(m=>m.id===saved)?saved:meetings[0]?.id);
+    } catch(error) { notice.textContent=error.message||t('demoLoadFailed'); notice.hidden=false; list.innerHTML=`<p class="showcase-empty">${t('demoUnavailable')}</p>`; }
   }
-
   initialize();
 }

@@ -10,7 +10,7 @@ from .providers.summary import ConfiguredSummaryProvider
 from .teacher_demo import TeacherDemoGuard
 
 
-def process_video(video_path: Path, on_transcript=None) -> tuple[str, str, dict]:
+def process_video(video_path: Path, on_transcript=None, target_language=None) -> tuple[str, str, dict]:
     """Shared processing entry point for a local file; cloud import is intentionally out of scope."""
     with tempfile.TemporaryDirectory(prefix="meeting-audio-") as temp_dir:
         audio_path = Path(temp_dir) / "audio.wav"
@@ -33,5 +33,7 @@ def process_video(video_path: Path, on_transcript=None) -> tuple[str, str, dict]
         TeacherDemoGuard(settings).ensure_active()
     if on_transcript is not None:
         on_transcript(transcript.text, transcript.language)
-    summary = ConfiguredSummaryProvider(settings.provider).summarize(transcript.text, transcript.language)
+    provider = ConfiguredSummaryProvider(settings.provider)
+    summary = (provider.summarize(transcript.text, transcript.language, target_language)
+               if target_language else provider.summarize(transcript.text, transcript.language))
     return transcript.text, transcript.language, summary
